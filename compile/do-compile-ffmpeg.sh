@@ -301,8 +301,8 @@ ${FF_CROSS_PREFIX}ld \
 -rpath-link=${FF_SYSROOT}usr/lib \
 -L${FF_SYSROOT}/usr/lib \
 -L${FF_PREFIX}/lib \
--soname libijkffmpeg.so -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o \
-${FF_SHARED_PREFIX}/libijkffmpeg.so \
+-soname libffmpeg.so -shared -nostdlib -Bsymbolic --whole-archive --no-undefined -o \
+${FF_SHARED_PREFIX}/libffmpeg.so \
     ${FF_PREFIX}/lib/libavcodec.a \
     ${FF_PREFIX}/lib/libavfilter.a \
     ${FF_PREFIX}/lib/libavformat.a \
@@ -323,11 +323,11 @@ cd compile/ndkbuild/jni
 
 ${FF_NDK}/ndk-build
 
-rm -rf libijkffmpeg.so
+rm -rf libffmpeg.so
 
 rm -rf /obj
 
-cp -f ./../libs/armeabi-v7a/libijkffmpeg.so ${FF_SO_PREFIX}/libijkffmpeg.so
+cp -f ./../libs/armeabi-v7a/libffmpeg.so ${FF_SO_PREFIX}/libffmpeg.so
 
 
 
