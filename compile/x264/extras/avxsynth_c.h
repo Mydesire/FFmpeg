@@ -33,12 +33,8 @@
 #ifndef __AVXSYNTH_C__
 #define __AVXSYNTH_C__
   
+#include "windowsPorts/windows2linux.h"
 #include <stdarg.h>
-#include <stdint.h>
-
-typedef int64_t INT64;
-#define __stdcall
-#define __declspec(x)
 
 #ifdef __cplusplus
 #  define EXTERN_C extern "C"
@@ -66,6 +62,12 @@ typedef int64_t INT64;
 #  else
 #    define AVSC_API(ret, name) typedef ret (AVSC_CC *name##_func)
 #  endif
+#endif
+
+#ifdef __GNUC__
+typedef long long int INT64;
+#else
+typedef __int64 INT64;
 #endif
 
 

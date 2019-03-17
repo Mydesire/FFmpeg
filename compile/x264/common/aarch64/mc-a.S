@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc.S: aarch64 motion compensation
  *****************************************************************************
- * Copyright (C) 2009-2017 x264 project
+ * Copyright (C) 2009-2014 x264 project
  *
  * Authors: David Conrad <lessen42@gmail.com>
  *          Janne Grunau <janne-x264@jannau.net>
@@ -31,7 +31,7 @@
 // note: prefetch stuff assumes 64-byte cacheline
 
 // void prefetch_ref( uint8_t *pix, intptr_t stride, int parity )
-function prefetch_ref_aarch64, export=1
+function x264_prefetch_ref_aarch64, export=1
     cmp         w2,  #1
     csel        x2,  xzr, x1, eq
     add         x0,  x0,  #64
@@ -54,8 +54,8 @@ endfunc
 
 // void prefetch_fenc( uint8_t *pix_y,  intptr_t stride_y,
 //                     uint8_t *pix_uv, intptr_t stride_uv, int mb_x )
-.macro prefetch_fenc sub
-function prefetch_fenc_\sub\()_aarch64, export=1
+.macro x264_prefetch_fenc sub
+function x264_prefetch_fenc_\sub\()_aarch64, export=1
     and         w6,  w5,  #3
     and         w7,  w5,  #3
     mul         x6,  x6,  x1
@@ -82,14 +82,14 @@ function prefetch_fenc_\sub\()_aarch64, export=1
 endfunc
 .endm
 
-prefetch_fenc 420
-prefetch_fenc 422
+x264_prefetch_fenc 420
+x264_prefetch_fenc 422
 
 // void pixel_avg( uint8_t *dst,  intptr_t dst_stride,
 //                 uint8_t *src1, intptr_t src1_stride,
 //                 uint8_t *src2, intptr_t src2_stride, int weight );
 .macro AVGH w h
-function pixel_avg_\w\()x\h\()_neon, export=1
+function x264_pixel_avg_\w\()x\h\()_neon, export=1
     mov         w10, #64
     cmp         w6,  #32
     mov         w9, #\h
@@ -292,7 +292,7 @@ function pixel_avg_w16_neon
     ret
 endfunc
 
-function pixel_avg2_w4_neon, export=1
+function x264_pixel_avg2_w4_neon, export=1
 1:
     subs        w5,  w5,  #2
     ld1        {v0.s}[0],  [x2], x3
@@ -307,7 +307,7 @@ function pixel_avg2_w4_neon, export=1
     ret
 endfunc
 
-function pixel_avg2_w8_neon, export=1
+function x264_pixel_avg2_w8_neon, export=1
 1:
     subs        w5,  w5,  #2
     ld1        {v0.8b}, [x2], x3
@@ -322,7 +322,7 @@ function pixel_avg2_w8_neon, export=1
     ret
 endfunc
 
-function pixel_avg2_w16_neon, export=1
+function x264_pixel_avg2_w16_neon, export=1
 1:
     subs        w5,  w5,  #2
     ld1        {v0.16b}, [x2], x3
@@ -337,7 +337,7 @@ function pixel_avg2_w16_neon, export=1
     ret
 endfunc
 
-function pixel_avg2_w20_neon, export=1
+function x264_pixel_avg2_w20_neon, export=1
     sub         x1,  x1,  #16
 1:
     subs        w5,  w5,  #2
@@ -373,7 +373,7 @@ endfunc
 
 // void mc_weight( uint8_t *src, intptr_t src_stride, uint8_t *dst,
 //                 intptr_t dst_stride, const x264_weight_t *weight, int h )
-function mc_weight_w20_neon, export=1
+function x264_mc_weight_w20_neon, export=1
     weight_prologue full
     sub         x1,  x1,  #16
 1:
@@ -409,7 +409,7 @@ function mc_weight_w20_neon, export=1
     ret
 endfunc
 
-function mc_weight_w16_neon, export=1
+function x264_mc_weight_w16_neon, export=1
     weight_prologue full
 weight16_loop:
 1:
@@ -438,7 +438,7 @@ weight16_loop:
     ret
 endfunc
 
-function mc_weight_w8_neon, export=1
+function x264_mc_weight_w8_neon, export=1
     weight_prologue full
 1:
     subs        w9,  w9,  #2
@@ -458,7 +458,7 @@ function mc_weight_w8_neon, export=1
     ret
 endfunc
 
-function mc_weight_w4_neon, export=1
+function x264_mc_weight_w4_neon, export=1
     weight_prologue full
 1:
     subs        w9,  w9,  #2
@@ -474,7 +474,7 @@ function mc_weight_w4_neon, export=1
     ret
 endfunc
 
-function mc_weight_w20_nodenom_neon, export=1
+function x264_mc_weight_w20_nodenom_neon, export=1
     weight_prologue nodenom
     sub         x1,  x1,  #16
 1:
@@ -505,7 +505,7 @@ function mc_weight_w20_nodenom_neon, export=1
     ret
 endfunc
 
-function mc_weight_w16_nodenom_neon, export=1
+function x264_mc_weight_w16_nodenom_neon, export=1
     weight_prologue nodenom
 1:
     subs        w9,  w9,  #2
@@ -529,7 +529,7 @@ function mc_weight_w16_nodenom_neon, export=1
     ret
 endfunc
 
-function mc_weight_w8_nodenom_neon, export=1
+function x264_mc_weight_w8_nodenom_neon, export=1
     weight_prologue nodenom
 1:
     subs        w9,  w9,  #2
@@ -547,7 +547,7 @@ function mc_weight_w8_nodenom_neon, export=1
     ret
 endfunc
 
-function mc_weight_w4_nodenom_neon, export=1
+function x264_mc_weight_w4_nodenom_neon, export=1
     weight_prologue nodenom
 1:
     subs        w9,  w9,  #2
@@ -568,7 +568,7 @@ endfunc
 .endm
 
 .macro weight_simple name op
-function mc_weight_w20_\name\()_neon, export=1
+function x264_mc_weight_w20_\name\()_neon, export=1
     weight_simple_prologue
 1:
     subs        w5,  w5,  #2
@@ -588,7 +588,7 @@ function mc_weight_w20_\name\()_neon, export=1
     ret
 endfunc
 
-function mc_weight_w16_\name\()_neon, export=1
+function x264_mc_weight_w16_\name\()_neon, export=1
     weight_simple_prologue
 1:
     subs        w5,  w5,  #2
@@ -602,7 +602,7 @@ function mc_weight_w16_\name\()_neon, export=1
     ret
 endfunc
 
-function mc_weight_w8_\name\()_neon, export=1
+function x264_mc_weight_w8_\name\()_neon, export=1
     weight_simple_prologue
 1:
     subs        w5,  w5,  #2
@@ -616,7 +616,7 @@ function mc_weight_w8_\name\()_neon, export=1
     ret
 endfunc
 
-function mc_weight_w4_\name\()_neon, export=1
+function x264_mc_weight_w4_\name\()_neon, export=1
     weight_simple_prologue
 1:
     subs        w5,  w5,  #2
@@ -635,7 +635,7 @@ weight_simple offsetsub, uqsub
 
 
 // void mc_copy( uint8_t *dst, intptr_t dst_stride, uint8_t *src, intptr_t src_stride, int height )
-function mc_copy_w4_neon, export=1
+function x264_mc_copy_w4_neon, export=1
 1:
     subs        w4,  w4,  #4
     ld1        {v0.s}[0],  [x2],  x3
@@ -650,7 +650,7 @@ function mc_copy_w4_neon, export=1
     ret
 endfunc
 
-function mc_copy_w8_neon, export=1
+function x264_mc_copy_w8_neon, export=1
 1:  subs        w4,  w4,  #4
     ld1        {v0.8b},  [x2],  x3
     ld1        {v1.8b},  [x2],  x3
@@ -664,7 +664,7 @@ function mc_copy_w8_neon, export=1
     ret
 endfunc
 
-function mc_copy_w16_neon, export=1
+function x264_mc_copy_w16_neon, export=1
 1:  subs        w4,  w4,  #4
     ld1        {v0.16b}, [x2],  x3
     ld1        {v1.16b}, [x2],  x3
@@ -678,11 +678,11 @@ function mc_copy_w16_neon, export=1
     ret
 endfunc
 
-// void mc_chroma( uint8_t *dst_u, uint8_t *dst_v,
-//                 intptr_t i_dst_stride,
-//                 uint8_t *src, intptr_t i_src_stride,
-//                 int dx, int dy, int i_width, int i_height );
-function mc_chroma_neon, export=1
+// void x264_mc_chroma_neon( uint8_t *dst_u, uint8_t *dst_v,
+//                           intptr_t i_dst_stride,
+//                           uint8_t *src, intptr_t i_src_stride,
+//                           int dx, int dy, int i_width, int i_height );
+function x264_mc_chroma_neon, export=1
     ldr         w15, [sp]               // height
     sbfx        x12, x6,  #3,  #29      // asr(3) and sign extend
     sbfx        x11, x5,  #3,  #29      // asr(3) and sign extend
@@ -718,9 +718,9 @@ endfunc
 function mc_chroma_w\width\()_neon
 // since the element size varies, there's a different index for the 2nd store
 .if \width == 4
-    .set idx2, 1
+    .set st2, 1
 .else
-    .set idx2, 2
+    .set st2, 2
 .endif
     CHROMA_MC_START
     b.eq        2f
@@ -785,10 +785,10 @@ function mc_chroma_w\width\()_neon
     //pld         [x3]
     //pld         [x3, x4]
 
-    st1        {v16.\vsize}[0],    [x0], x2
-    st1        {v16.\vsize}[idx2], [x1], x2
-    st1        {v17.\vsize}[0],    [x0], x2
-    st1        {v17.\vsize}[idx2], [x1], x2
+    st1        {v16.\vsize}[0],   [x0], x2
+    st1        {v16.\vsize}[st2], [x1], x2
+    st1        {v17.\vsize}[0],   [x0], x2
+    st1        {v17.\vsize}[st2], [x1], x2
     b.gt        1b
 
     ret
@@ -820,10 +820,10 @@ function mc_chroma_w\width\()_neon
     //pld         [x3]
     //pld         [x3, x4]
 
-    st1        {v16.\vsize}[0],    [x0], x2
-    st1        {v16.\vsize}[idx2], [x0], x2
-    st1        {v17.\vsize}[0],    [x1], x2
-    st1        {v17.\vsize}[idx2], [x1], x2
+    st1        {v16.\vsize}[0],   [x0], x2
+    st1        {v16.\vsize}[st2], [x0], x2
+    st1        {v17.\vsize}[0],   [x1], x2
+    st1        {v17.\vsize}[st2], [x1], x2
     b.gt        3b
 
     ret
@@ -853,10 +853,10 @@ function mc_chroma_w\width\()_neon
     //pld         [x3]
     //pld         [x3, x4]
 
-    st1        {v16.\vsize}[0],    [x0], x2
-    st1        {v16.\vsize}[idx2], [x0], x2
-    st1        {v17.\vsize}[0],    [x1], x2
-    st1        {v17.\vsize}[idx2], [x1], x2
+    st1        {v16.\vsize}[0],   [x0], x2
+    st1        {v16.\vsize}[st2], [x0], x2
+    st1        {v17.\vsize}[0],   [x1], x2
+    st1        {v17.\vsize}[st2], [x1], x2
     b.gt        5b
 
     ret
@@ -1016,9 +1016,9 @@ function mc_chroma_w8_neon
     ret
 endfunc
 
-// void hpel_filter( pixel *dsth, pixel *dstv, pixel *dstc, pixel *src,
-//                   intptr_t stride, int width, int height, int16_t *buf )
-function hpel_filter_neon, export=1
+//void hpel_filter( pixel *dsth, pixel *dstv, pixel *dstc, pixel *src,
+//                  intptr_t stride, int width, int height, int16_t *buf )
+function x264_hpel_filter_neon, export=1
     ubfm        x9,  x3,  #0,  #3
     add         w15, w5,  w9
     sub         x13, x3,  x9            // align src
@@ -1158,7 +1158,7 @@ endfunc
 // frame_init_lowres_core( uint8_t *src0, uint8_t *dst0, uint8_t *dsth,
 //                         uint8_t *dstv, uint8_t *dstc, intptr_t src_stride,
 //                         intptr_t dst_stride, int width, int height )
-function frame_init_lowres_core_neon, export=1
+function x264_frame_init_lowres_core_neon, export=1
     ldr         w8,  [sp]
     sub         x10, x6,  w7, uxtw      // dst_stride - width
     and         x10, x10, #~15
@@ -1233,12 +1233,12 @@ function frame_init_lowres_core_neon, export=1
     ret
 endfunc
 
-function load_deinterleave_chroma_fenc_neon, export=1
+function x264_load_deinterleave_chroma_fenc_neon, export=1
     mov         x4,  #FENC_STRIDE/2
     b           load_deinterleave_chroma
 endfunc
 
-function load_deinterleave_chroma_fdec_neon, export=1
+function x264_load_deinterleave_chroma_fdec_neon, export=1
     mov         x4,  #FDEC_STRIDE/2
 load_deinterleave_chroma:
     ld2        {v0.8b,v1.8b}, [x1], x2
@@ -1253,64 +1253,7 @@ load_deinterleave_chroma:
     ret
 endfunc
 
-function plane_copy_core_neon, export=1
-    add         w8,  w4,  #15 // 32-bit write clears the upper 32-bit the register
-    and         w4,  w8,  #~15
-    // safe use of the full reg since negative width makes no sense
-    sub         x1,  x1,  x4
-    sub         x3,  x3,  x4
-1:
-    mov         w8,  w4
-16:
-    tst         w8,  #16
-    b.eq        32f
-    subs        w8,  w8,  #16
-    ldr         q0,  [x2], #16
-    str         q0,  [x0], #16
-    b.eq        0f
-32:
-    subs        w8,  w8,  #32
-    ldp         q0,  q1,  [x2], #32
-    stp         q0,  q1,  [x0], #32
-    b.gt        32b
-0:
-    subs        w5,  w5,  #1
-    add         x2,  x2,  x3
-    add         x0,  x0,  x1
-    b.gt        1b
-
-    ret
-endfunc
-
-function plane_copy_swap_core_neon, export=1
-    lsl         w4,  w4,  #1
-    sub         x1,  x1,  x4
-    sub         x3,  x3,  x4
-1:
-    mov         w8,  w4
-    tbz         w4,  #4,  32f
-    subs        w8,  w8,  #16
-    ld1         {v0.16b}, [x2], #16
-    rev16       v0.16b, v0.16b
-    st1         {v0.16b}, [x0], #16
-    b.eq        0f
-32:
-    subs        w8,  w8,  #32
-    ld1         {v0.16b,v1.16b}, [x2], #32
-    rev16       v0.16b, v0.16b
-    rev16       v1.16b, v1.16b
-    st1         {v0.16b,v1.16b}, [x0], #32
-    b.gt        32b
-0:
-    subs        w5,  w5,  #1
-    add         x2,  x2,  x3
-    add         x0,  x0,  x1
-    b.gt        1b
-
-    ret
-endfunc
-
-function plane_copy_deinterleave_neon, export=1
+function x264_plane_copy_deinterleave_neon, export=1
     add         w9,  w6,  #15
     and         w9,  w9,  #0xfffffff0
     sub         x1,  x1,  x9
@@ -1349,7 +1292,7 @@ endfunc
     b.gt            1b
 .endm
 
-function plane_copy_deinterleave_rgb_neon, export=1
+function x264_plane_copy_deinterleave_rgb_neon, export=1
 #if SYS_MACOSX
     ldr             w8,  [sp]
     ldp             w9,  w10, [sp, #4]
@@ -1381,7 +1324,7 @@ function plane_copy_deinterleave_rgb_neon, export=1
     ret
 endfunc
 
-function plane_copy_interleave_core_neon, export=1
+function x264_plane_copy_interleave_neon, export=1
     add         w9,  w6,  #15
     and         w9,  w9,  #0xfffffff0
     sub         x1,  x1,  x9,  lsl #1
@@ -1404,7 +1347,7 @@ function plane_copy_interleave_core_neon, export=1
     ret
 endfunc
 
-function store_interleave_chroma_neon, export=1
+function x264_store_interleave_chroma_neon, export=1
     mov             x5,  #FDEC_STRIDE
 1:
     ld1        {v0.8b}, [x2], x5
@@ -1418,338 +1361,5 @@ function store_interleave_chroma_neon, export=1
     st1        {v5.16b}, [x0], x1
     b.gt        1b
 
-    ret
-endfunc
-
-.macro integral4h p1, p2
-    ext         v1.8b,  \p1\().8b,  \p2\().8b,  #1
-    ext         v2.8b,  \p1\().8b,  \p2\().8b,  #2
-    ext         v3.8b,  \p1\().8b,  \p2\().8b,  #3
-    uaddl       v0.8h,  \p1\().8b,  v1.8b
-    uaddl       v4.8h,  v2.8b,  v3.8b
-    add         v0.8h,  v0.8h,  v4.8h
-    add         v0.8h,  v0.8h,  v5.8h
-.endm
-
-function integral_init4h_neon, export=1
-    sub         x3,  x0,  x2, lsl #1
-    ld1        {v6.8b,v7.8b}, [x1], #16
-1:
-    subs        x2,  x2,  #16
-    ld1        {v5.8h},  [x3], #16
-    integral4h  v6, v7
-    ld1        {v6.8b},  [x1], #8
-    ld1        {v5.8h},  [x3], #16
-    st1        {v0.8h},  [x0], #16
-    integral4h  v7, v6
-    ld1        {v7.8b},  [x1], #8
-    st1        {v0.8h},  [x0], #16
-    b.gt        1b
-    ret
-endfunc
-
-.macro integral8h p1, p2, s
-    ext         v1.8b,  \p1\().8b,  \p2\().8b,  #1
-    ext         v2.8b,  \p1\().8b,  \p2\().8b,  #2
-    ext         v3.8b,  \p1\().8b,  \p2\().8b,  #3
-    ext         v4.8b,  \p1\().8b,  \p2\().8b,  #4
-    ext         v5.8b,  \p1\().8b,  \p2\().8b,  #5
-    ext         v6.8b,  \p1\().8b,  \p2\().8b,  #6
-    ext         v7.8b,  \p1\().8b,  \p2\().8b,  #7
-    uaddl       v0.8h,  \p1\().8b,  v1.8b
-    uaddl       v2.8h,  v2.8b,  v3.8b
-    uaddl       v4.8h,  v4.8b,  v5.8b
-    uaddl       v6.8h,  v6.8b,  v7.8b
-    add         v0.8h,  v0.8h,  v2.8h
-    add         v4.8h,  v4.8h,  v6.8h
-    add         v0.8h,  v0.8h,  v4.8h
-    add         v0.8h,  v0.8h,  \s\().8h
-.endm
-
-function integral_init8h_neon, export=1
-    sub         x3,  x0,  x2, lsl #1
-    ld1        {v16.8b,v17.8b}, [x1], #16
-1:
-    subs        x2,  x2,  #16
-    ld1        {v18.8h}, [x3], #16
-    integral8h  v16, v17, v18
-    ld1        {v16.8b}, [x1], #8
-    ld1        {v18.8h}, [x3], #16
-    st1        {v0.8h},  [x0], #16
-    integral8h  v17, v16, v18
-    ld1        {v17.8b}, [x1], #8
-    st1        {v0.8h},  [x0], #16
-    b.gt        1b
-    ret
-endfunc
-
-function integral_init4v_neon, export=1
-    mov         x3,  x0
-    add         x4,  x0,  x2,  lsl #3
-    add         x8,  x0,  x2,  lsl #4
-    sub         x2,  x2,  #8
-    ld1        {v20.8h,v21.8h,v22.8h}, [x3], #48
-    ld1        {v16.8h,v17.8h,v18.8h}, [x8], #48
-1:
-    subs        x2,  x2,  #16
-    ld1        {v24.8h,v25.8h}, [x4], #32
-    ext         v0.16b,  v20.16b, v21.16b, #8
-    ext         v1.16b,  v21.16b, v22.16b, #8
-    ext         v2.16b,  v16.16b, v17.16b, #8
-    ext         v3.16b,  v17.16b, v18.16b, #8
-    sub         v24.8h,  v24.8h,  v20.8h
-    sub         v25.8h,  v25.8h,  v21.8h
-    add         v0.8h,   v0.8h,   v20.8h
-    add         v1.8h,   v1.8h,   v21.8h
-    add         v2.8h,   v2.8h,   v16.8h
-    add         v3.8h,   v3.8h,   v17.8h
-    st1        {v24.8h},  [x1], #16
-    st1        {v25.8h},  [x1], #16
-    mov         v20.16b,  v22.16b
-    mov         v16.16b,  v18.16b
-    sub         v0.8h,   v2.8h,   v0.8h
-    sub         v1.8h,   v3.8h,   v1.8h
-    ld1        {v21.8h,v22.8h}, [x3], #32
-    ld1        {v17.8h,v18.8h}, [x8], #32
-    st1        {v0.8h},  [x0], #16
-    st1        {v1.8h},  [x0], #16
-    b.gt        1b
-2:
-    ret
-endfunc
-
-function integral_init8v_neon, export=1
-    add         x2,  x0,  x1,  lsl #4
-    sub         x1,  x1,  #8
-    ands        x3,  x1,  #16 - 1
-    b.eq        1f
-    subs        x1,  x1,  #8
-    ld1        {v0.8h}, [x0]
-    ld1        {v2.8h}, [x2], #16
-    sub         v4.8h,  v2.8h,  v0.8h
-    st1        {v4.8h},  [x0], #16
-    b.le        2f
-1:
-    subs        x1,  x1,  #16
-    ld1        {v0.8h,v1.8h}, [x0]
-    ld1        {v2.8h,v3.8h}, [x2], #32
-    sub         v4.8h,  v2.8h,  v0.8h
-    sub         v5.8h,  v3.8h,  v1.8h
-    st1        {v4.8h},  [x0], #16
-    st1        {v5.8h},  [x0], #16
-    b.gt        1b
-2:
-    ret
-endfunc
-
-function mbtree_propagate_cost_neon, export=1
-    ld1r        {v5.4s},  [x5]
-8:
-    subs        w6,  w6,  #8
-    ld1         {v1.8h},  [x1], #16
-    ld1         {v2.8h},  [x2], #16
-    ld1         {v3.8h},  [x3], #16
-    ld1         {v4.8h},  [x4], #16
-    bic         v3.8h,  #0xc0, lsl #8
-    umin        v3.8h,  v2.8h,  v3.8h
-    umull       v20.4s, v2.4h,  v4.4h   // propagate_intra
-    umull2      v21.4s, v2.8h,  v4.8h   // propagate_intra
-    usubl       v22.4s, v2.4h,  v3.4h   // propagate_num
-    usubl2      v23.4s, v2.8h,  v3.8h   // propagate_num
-    uxtl        v26.4s, v2.4h           // propagate_denom
-    uxtl2       v27.4s, v2.8h           // propagate_denom
-    uxtl        v24.4s, v1.4h
-    uxtl2       v25.4s, v1.8h
-    ucvtf       v20.4s, v20.4s
-    ucvtf       v21.4s, v21.4s
-    ucvtf       v26.4s, v26.4s
-    ucvtf       v27.4s, v27.4s
-    ucvtf       v22.4s, v22.4s
-    ucvtf       v23.4s, v23.4s
-    frecpe      v28.4s, v26.4s
-    frecpe      v29.4s, v27.4s
-    ucvtf       v24.4s, v24.4s
-    ucvtf       v25.4s, v25.4s
-    frecps      v30.4s, v28.4s, v26.4s
-    frecps      v31.4s, v29.4s, v27.4s
-    fmla        v24.4s, v20.4s, v5.4s   // propagate_amount
-    fmla        v25.4s, v21.4s, v5.4s   // propagate_amount
-    fmul        v28.4s, v28.4s, v30.4s
-    fmul        v29.4s, v29.4s, v31.4s
-    fmul        v16.4s, v24.4s, v22.4s
-    fmul        v17.4s, v25.4s, v23.4s
-    fmul        v18.4s, v16.4s, v28.4s
-    fmul        v19.4s, v17.4s, v29.4s
-    fcvtns      v20.4s, v18.4s
-    fcvtns      v21.4s, v19.4s
-    sqxtn       v0.4h,  v20.4s
-    sqxtn2      v0.8h,  v21.4s
-    st1         {v0.8h},  [x0], #16
-    b.gt        8b
-    ret
-endfunc
-
-const pw_0to15, align=5
-    .short 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-endconst
-
-function mbtree_propagate_list_internal_neon, export=1
-    movrel      x11,  pw_0to15
-    dup         v31.8h,  w4             // bipred_weight
-    movi        v30.8h,  #0xc0, lsl #8
-    ld1         {v29.8h},  [x11] //h->mb.i_mb_x,h->mb.i_mb_y
-    movi        v28.4s,  #4
-    movi        v27.8h,  #31
-    movi        v26.8h,  #32
-    dup         v24.8h,  w5             // mb_y
-    zip1        v29.8h,  v29.8h, v24.8h
-8:
-    subs        w6,  w6,  #8
-    ld1         {v1.8h},  [x1], #16     // propagate_amount
-    ld1         {v2.8h},  [x2], #16     // lowres_cost
-    and         v2.16b, v2.16b, v30.16b
-    cmeq        v25.8h, v2.8h,  v30.8h
-    umull       v16.4s, v1.4h,  v31.4h
-    umull2      v17.4s, v1.8h,  v31.8h
-    rshrn       v16.4h, v16.4s, #6
-    rshrn2      v16.8h, v17.4s, #6
-    bsl         v25.16b, v16.16b, v1.16b // if( lists_used == 3 )
-    //          propagate_amount = (propagate_amount * bipred_weight + 32) >> 6
-    ld1         {v4.8h,v5.8h},  [x0],  #32
-    sshr        v6.8h,  v4.8h,  #5
-    sshr        v7.8h,  v5.8h,  #5
-    add         v6.8h,  v6.8h,  v29.8h
-    add         v29.8h, v29.8h, v28.8h
-    add         v7.8h,  v7.8h,  v29.8h
-    add         v29.8h, v29.8h, v28.8h
-    st1         {v6.8h,v7.8h},  [x3],  #32
-    and         v4.16b, v4.16b, v27.16b
-    and         v5.16b, v5.16b, v27.16b
-    uzp1        v6.8h,  v4.8h,  v5.8h   // x & 31
-    uzp2        v7.8h,  v4.8h,  v5.8h   // y & 31
-    sub         v4.8h,  v26.8h, v6.8h   // 32 - (x & 31)
-    sub         v5.8h,  v26.8h, v7.8h   // 32 - (y & 31)
-    mul         v19.8h, v6.8h,  v7.8h   // idx3weight = y*x;
-    mul         v18.8h, v4.8h,  v7.8h   // idx2weight = y*(32-x);
-    mul         v17.8h, v6.8h,  v5.8h   // idx1weight = (32-y)*x;
-    mul         v16.8h, v4.8h,  v5.8h   // idx0weight = (32-y)*(32-x) ;
-    umull       v6.4s,  v19.4h, v25.4h
-    umull2      v7.4s,  v19.8h, v25.8h
-    umull       v4.4s,  v18.4h, v25.4h
-    umull2      v5.4s,  v18.8h, v25.8h
-    umull       v2.4s,  v17.4h, v25.4h
-    umull2      v3.4s,  v17.8h, v25.8h
-    umull       v0.4s,  v16.4h, v25.4h
-    umull2      v1.4s,  v16.8h, v25.8h
-    rshrn       v19.4h, v6.4s,  #10
-    rshrn2      v19.8h, v7.4s,  #10
-    rshrn       v18.4h, v4.4s,  #10
-    rshrn2      v18.8h, v5.4s,  #10
-    rshrn       v17.4h, v2.4s,  #10
-    rshrn2      v17.8h, v3.4s,  #10
-    rshrn       v16.4h, v0.4s,  #10
-    rshrn2      v16.8h, v1.4s,  #10
-    zip1        v0.8h,  v16.8h, v17.8h
-    zip2        v1.8h,  v16.8h, v17.8h
-    zip1        v2.8h,  v18.8h, v19.8h
-    zip2        v3.8h,  v18.8h, v19.8h
-    st1         {v0.8h,v1.8h},  [x3], #32
-    st1         {v2.8h,v3.8h},  [x3], #32
-    b.ge        8b
-    ret
-endfunc
-
-function memcpy_aligned_neon, export=1
-    tst         x2,  #16
-    b.eq        32f
-    sub         x2,  x2,  #16
-    ldr         q0,  [x1], #16
-    str         q0,  [x0], #16
-32:
-    tst         x2,  #32
-    b.eq        640f
-    sub         x2,  x2,  #32
-    ldp         q0,  q1,  [x1], #32
-    stp         q0,  q1,  [x0], #32
-640:
-    cbz         x2,  1f
-64:
-    subs        x2,  x2,  #64
-    ldp         q0,  q1,  [x1, #32]
-    ldp         q2,  q3,  [x1], #64
-    stp         q0,  q1,  [x0, #32]
-    stp         q2,  q3,  [x0], #64
-    b.gt        64b
-1:
-    ret
-endfunc
-
-function memzero_aligned_neon, export=1
-    movi        v0.16b,  #0
-    movi        v1.16b,  #0
-1:
-    subs        x1,  x1,  #128
-    stp         q0,  q1,  [x0, #96]
-    stp         q0,  q1,  [x0, #64]
-    stp         q0,  q1,  [x0, #32]
-    stp         q0,  q1,  [x0], 128
-    b.gt        1b
-    ret
-endfunc
-
-// void mbtree_fix8_pack( int16_t *dst, float *src, int count )
-function mbtree_fix8_pack_neon, export=1
-    subs        w3,  w2,  #8
-    b.lt        2f
-1:
-    subs        w3,  w3,  #8
-    ld1         {v0.4s,v1.4s}, [x1], #32
-    fcvtzs      v0.4s,  v0.4s,  #8
-    fcvtzs      v1.4s,  v1.4s,  #8
-    sqxtn       v2.4h,  v0.4s
-    sqxtn2      v2.8h,  v1.4s
-    rev16       v3.16b, v2.16b
-    st1         {v3.8h},  [x0], #16
-    b.ge        1b
-2:
-    adds        w3,  w3,  #8
-    b.eq        4f
-3:
-    subs        w3,  w3,  #1
-    ldr         s0, [x1], #4
-    fcvtzs      w4,  s0,  #8
-    rev16       w5,  w4
-    strh        w5, [x0], #2
-    b.gt        3b
-4:
-    ret
-endfunc
-
-// void mbtree_fix8_unpack( float *dst, int16_t *src, int count )
-function mbtree_fix8_unpack_neon, export=1
-    subs        w3,  w2,  #8
-    b.lt        2f
-1:
-    subs        w3,  w3,  #8
-    ld1         {v0.8h}, [x1], #16
-    rev16       v1.16b, v0.16b
-    sxtl        v2.4s,  v1.4h
-    sxtl2       v3.4s,  v1.8h
-    scvtf       v4.4s,  v2.4s,  #8
-    scvtf       v5.4s,  v3.4s,  #8
-    st1         {v4.4s,v5.4s}, [x0], #32
-    b.ge        1b
-2:
-    adds        w3,  w3,  #8
-    b.eq        4f
-3:
-    subs        w3,  w3,  #1
-    ldrh        w4, [x1], #2
-    rev16       w5,  w4
-    sxth        w6,  w5
-    scvtf       s0,  w6,  #8
-    str         s0, [x0], #4
-    b.gt        3b
-4:
     ret
 endfunc

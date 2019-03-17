@@ -1,10 +1,9 @@
 /****************************************************************************
- * dct-a.S: aarch64 transform and zigzag
+ * dct-a.S: AArch6464 transform and zigzag
  *****************************************************************************
- * Copyright (C) 2009-2017 x264 project
+ * Copyright (C) 2009-2014 x264 project
  *
  * Authors: David Conrad <lessen42@gmail.com>
- *          Janne Grunau <janne-x264@jannau.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,25 +30,6 @@ const scan4x4_frame, align=4
 .byte   10,11, 16,17, 24,25, 18,19
 .byte   12,13,  6,7,  14,15, 20,21
 .byte   26,27, 28,29, 22,23, 30,31
-endconst
-
-const scan4x4_field, align=4
-.byte    0,1,   2,3,   8,9,   4,5
-.byte    6,7,  10,11, 12,13, 14,15
-endconst
-
-const sub4x4_frame, align=4
-.byte    0,  1,  4,  8
-.byte    5,  2,  3,  6
-.byte    9, 12, 13, 10
-.byte    7, 11, 14, 15
-endconst
-
-const sub4x4_field, align=4
-.byte    0,  4,  1,  8
-.byte   12,  5,  9, 13
-.byte    2,  6, 10, 14
-.byte    3,  7, 11, 15
 endconst
 
 // sum = a + (b>>shift)   sub = (a>>shift) - b
@@ -79,7 +59,7 @@ endconst
 .endm
 
 
-function dct4x4dc_neon, export=1
+function x264_dct4x4dc_neon, export=1
     ld1        {v0.4h,v1.4h,v2.4h,v3.4h}, [x0]
     movi        v31.4h, #1
     SUMSUB_AB   v4.4h,  v5.4h,  v0.4h,  v1.4h
@@ -102,7 +82,7 @@ function dct4x4dc_neon, export=1
     ret
 endfunc
 
-function idct4x4dc_neon, export=1
+function x264_idct4x4dc_neon, export=1
     ld1        {v0.4h,v1.4h,v2.4h,v3.4h}, [x0]
     SUMSUB_AB   v4.4h,  v5.4h,  v0.4h,  v1.4h
     SUMSUB_AB   v6.4h,  v7.4h,  v2.4h,  v3.4h
@@ -131,7 +111,7 @@ endfunc
     sub         \v3, \v7, \v5
 .endm
 
-function sub4x4_dct_neon, export=1
+function x264_sub4x4_dct_neon, export=1
     mov         x3, #FENC_STRIDE
     mov         x4, #FDEC_STRIDE
     ld1        {v0.s}[0], [x1], x3
@@ -154,7 +134,7 @@ function sub4x4_dct_neon, export=1
     ret
 endfunc
 
-function sub8x4_dct_neon
+function x264_sub8x4_dct_neon
     ld1        {v0.8b}, [x1], x3
     ld1        {v1.8b}, [x2], x4
     usubl       v16.8h, v0.8b,  v1.8b
@@ -193,34 +173,34 @@ function sub8x4_dct_neon
     ret
 endfunc
 
-function sub8x8_dct_neon, export=1
+function x264_sub8x8_dct_neon, export=1
     mov         x5,  x30
     mov         x3, #FENC_STRIDE
     mov         x4, #FDEC_STRIDE
-    bl          sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
     mov         x30, x5
-    b           sub8x4_dct_neon
+    b           x264_sub8x4_dct_neon
 endfunc
 
-function sub16x16_dct_neon, export=1
+function x264_sub16x16_dct_neon, export=1
     mov         x5,  x30
     mov         x3, #FENC_STRIDE
     mov         x4, #FDEC_STRIDE
-    bl          sub8x4_dct_neon
-    bl          sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
     sub         x1, x1, #8*FENC_STRIDE-8
     sub         x2, x2, #8*FDEC_STRIDE-8
-    bl          sub8x4_dct_neon
-    bl          sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
     sub         x1, x1, #8
     sub         x2, x2, #8
-    bl          sub8x4_dct_neon
-    bl          sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
     sub         x1, x1, #8*FENC_STRIDE-8
     sub         x2, x2, #8*FDEC_STRIDE-8
-    bl          sub8x4_dct_neon
+    bl          x264_sub8x4_dct_neon
     mov         x30, x5
-    b           sub8x4_dct_neon
+    b           x264_sub8x4_dct_neon
 endfunc
 
 
@@ -255,7 +235,7 @@ endfunc
     SUMSUB_SHR2 2, v3.8h,  v5.8h,  v30.8h, v29.8h, v20.8h, v21.8h
 .endm
 
-function sub8x8_dct8_neon, export=1
+function x264_sub8x8_dct8_neon, export=1
     mov         x3, #FENC_STRIDE
     mov         x4, #FDEC_STRIDE
     ld1        {v16.8b}, [x1], x3
@@ -292,19 +272,19 @@ function sub8x8_dct8_neon, export=1
     ret
 endfunc
 
-function sub16x16_dct8_neon, export=1
+function x264_sub16x16_dct8_neon, export=1
     mov         x7,  x30
-    bl          X(sub8x8_dct8_neon)
+    bl          X(x264_sub8x8_dct8_neon)
     sub         x1,  x1,  #FENC_STRIDE*8 - 8
     sub         x2,  x2,  #FDEC_STRIDE*8 - 8
-    bl          X(sub8x8_dct8_neon)
+    bl          X(x264_sub8x8_dct8_neon)
     sub         x1,  x1,  #8
     sub         x2,  x2,  #8
-    bl          X(sub8x8_dct8_neon)
+    bl          X(x264_sub8x8_dct8_neon)
     mov         x30, x7
     sub         x1,  x1,  #FENC_STRIDE*8 - 8
     sub         x2,  x2,  #FDEC_STRIDE*8 - 8
-    b           X(sub8x8_dct8_neon)
+    b           X(x264_sub8x8_dct8_neon)
 endfunc
 
 
@@ -317,7 +297,7 @@ endfunc
     add         \d6, \d6, \d1
 .endm
 
-function add4x4_idct_neon, export=1
+function x264_add4x4_idct_neon, export=1
     mov         x2, #FDEC_STRIDE
     ld1        {v0.4h,v1.4h,v2.4h,v3.4h}, [x1]
 
@@ -357,7 +337,7 @@ function add4x4_idct_neon, export=1
     ret
 endfunc
 
-function add8x4_idct_neon, export=1
+function x264_add8x4_idct_neon, export=1
     ld1        {v0.8h,v1.8h}, [x1], #32
     ld1        {v2.8h,v3.8h}, [x1], #32
     transpose   v20.2d, v21.2d, v0.2d, v2.2d
@@ -398,29 +378,29 @@ function add8x4_idct_neon, export=1
     ret
 endfunc
 
-function add8x8_idct_neon, export=1
+function x264_add8x8_idct_neon, export=1
     mov             x2, #FDEC_STRIDE
     mov             x5,  x30
-    bl              X(add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
     mov             x30, x5
-    b               X(add8x4_idct_neon)
+    b               X(x264_add8x4_idct_neon)
 endfunc
 
-function add16x16_idct_neon, export=1
+function x264_add16x16_idct_neon, export=1
     mov             x2, #FDEC_STRIDE
     mov             x5,  x30
-    bl              X(add8x4_idct_neon)
-    bl              X(add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
     sub             x0, x0, #8*FDEC_STRIDE-8
-    bl              X(add8x4_idct_neon)
-    bl              X(add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
     sub             x0, x0, #8
-    bl              X(add8x4_idct_neon)
-    bl              X(add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
     sub             x0, x0, #8*FDEC_STRIDE-8
-    bl              X(add8x4_idct_neon)
+    bl              X(x264_add8x4_idct_neon)
     mov             x30, x5
-    b               X(add8x4_idct_neon)
+    b               X(x264_add8x4_idct_neon)
 endfunc
 
 .macro IDCT8_1D type
@@ -446,7 +426,7 @@ endfunc
     SUMSUB_AB   v19.8h, v20.8h, v2.8h,  v20.8h
 .endm
 
-function add8x8_idct8_neon, export=1
+function x264_add8x8_idct8_neon, export=1
     mov         x2,  #FDEC_STRIDE
     ld1        {v16.8h,v17.8h}, [x1], #32
     ld1        {v18.8h,v19.8h}, [x1], #32
@@ -503,19 +483,19 @@ function add8x8_idct8_neon, export=1
     ret
 endfunc
 
-function add16x16_idct8_neon, export=1
+function x264_add16x16_idct8_neon, export=1
     mov             x7,  x30
-    bl              X(add8x8_idct8_neon)
+    bl              X(x264_add8x8_idct8_neon)
     sub             x0,  x0,  #8*FDEC_STRIDE-8
-    bl              X(add8x8_idct8_neon)
+    bl              X(x264_add8x8_idct8_neon)
     sub             x0,  x0,  #8
-    bl              X(add8x8_idct8_neon)
+    bl              X(x264_add8x8_idct8_neon)
     sub             x0,  x0,  #8*FDEC_STRIDE-8
     mov             x30, x7
-    b               X(add8x8_idct8_neon)
+    b               X(x264_add8x8_idct8_neon)
 endfunc
 
-function add8x8_idct_dc_neon, export=1
+function x264_add8x8_idct_dc_neon, export=1
     mov         x2,  #FDEC_STRIDE
     ld1        {v16.4h}, [x1]
     ld1        {v0.8b}, [x0], x2
@@ -605,7 +585,7 @@ endfunc
     st1         {v7.16b}, [x2], x3
 .endm
 
-function add16x16_idct_dc_neon, export=1
+function x264_add16x16_idct_dc_neon, export=1
     mov         x2,  x0
     mov         x3,  #FDEC_STRIDE
 
@@ -622,35 +602,50 @@ function add16x16_idct_dc_neon, export=1
     ret
 endfunc
 
-.macro sub4x4x2_dct_dc, dst, t0, t1, t2, t3, t4, t5, t6, t7
-    ld1        {\t0\().8b}, [x1], x3
-    ld1        {\t1\().8b}, [x2], x4
-    ld1        {\t2\().8b}, [x1], x3
-    ld1        {\t3\().8b}, [x2], x4
-    usubl       \t0\().8h,  \t0\().8b,  \t1\().8b
-    ld1        {\t4\().8b}, [x1], x3
-    ld1        {\t5\().8b}, [x2], x4
-    usubl       \t1\().8h,  \t2\().8b,  \t3\().8b
-    ld1        {\t6\().8b}, [x1], x3
-    ld1        {\t7\().8b}, [x2], x4
-    add         \dst\().8h, \t0\().8h,  \t1\().8h
-    usubl       \t2\().8h,  \t4\().8b,  \t5\().8b
-    usubl       \t3\().8h,  \t6\().8b,  \t7\().8b
-    add         \dst\().8h, \dst\().8h, \t2\().8h
-    add         \dst\().8h, \dst\().8h, \t3\().8h
-.endm
-
-function sub8x8_dct_dc_neon, export=1
+function x264_sub8x8_dct_dc_neon, export=1
     mov             x3,  #FENC_STRIDE
     mov             x4,  #FDEC_STRIDE
-
-    sub4x4x2_dct_dc  v0, v16, v17, v18, v19, v20, v21, v22, v23
-    sub4x4x2_dct_dc  v1, v24, v25, v26, v27, v28, v29, v30, v31
+    ld1        {v16.8b}, [x1], x3
+    ld1        {v17.8b}, [x2], x4
+    usubl       v16.8h,  v16.8b, v17.8b
+    ld1        {v18.8b}, [x1], x3
+    ld1        {v19.8b}, [x2], x4
+    usubl       v17.8h,  v18.8b, v19.8b
+    ld1        {v20.8b}, [x1], x3
+    ld1        {v21.8b}, [x2], x4
+    usubl       v18.8h, v20.8b, v21.8b
+    ld1        {v22.8b}, [x1], x3
+    add         v0.8h,  v16.8h, v17.8h
+    ld1        {v23.8b}, [x2], x4
+    usubl       v19.8h, v22.8b, v23.8b
+    ld1        {v24.8b}, [x1], x3
+    add         v0.8h,  v0.8h,  v18.8h
+    ld1        {v25.8b}, [x2], x4
+    usubl       v20.8h, v24.8b, v25.8b
+    ld1        {v26.8b}, [x1], x3
+    add         v0.8h,  v0.8h,  v19.8h
+    ld1        {v27.8b}, [x2], x4
+    usubl       v21.8h, v26.8b, v27.8b
+    ld1        {v28.8b}, [x1], x3
+    ld1        {v29.8b}, [x2], x4
+    usubl       v22.8h, v28.8b, v29.8b
+    ld1        {v30.8b}, [x1], x3
+    add         v1.8h,  v20.8h, v21.8h
+    ld1        {v31.8b}, [x2], x4
+    usubl       v23.8h, v30.8b, v31.8b
+    add         v1.8h,  v1.8h,  v22.8h
+    add         v1.8h,  v1.8h,  v23.8h
 
     transpose   v2.2d,  v3.2d,  v0.2d,  v1.2d
-    SUMSUB_AB   v0.8h,  v1.8h,  v2.8h,  v3.8h
+
+    add         v0.8h,  v2.8h,  v3.8h
+    sub         v1.8h,  v2.8h,  v3.8h
+
     transpose   v2.2d,  v3.2d,  v0.2d,  v1.2d
-    SUMSUB_AB   v0.8h,  v1.8h,  v2.8h,  v3.8h
+
+    add         v0.8h,  v2.8h,  v3.8h
+    sub         v1.8h,  v2.8h,  v3.8h
+
     transpose   v2.2d,  v3.2d,  v0.2d,  v1.2d
 
     addp        v0.8h,  v2.8h,  v3.8h
@@ -660,65 +655,7 @@ function sub8x8_dct_dc_neon, export=1
     ret
 endfunc
 
-function sub8x16_dct_dc_neon, export=1
-    mov             x3,  #FENC_STRIDE
-    mov             x4,  #FDEC_STRIDE
-    sub4x4x2_dct_dc  v0, v16, v17, v18, v19, v20, v21, v22, v23
-    sub4x4x2_dct_dc  v1, v24, v25, v26, v27, v28, v29, v30, v31
-    sub4x4x2_dct_dc  v2, v16, v17, v18, v19, v20, v21, v22, v23
-    sub4x4x2_dct_dc  v3, v24, v25, v26, v27, v28, v29, v30, v31
-
-    addp             v4.8h,  v0.8h,  v2.8h
-    addp             v5.8h,  v1.8h,  v3.8h
-
-    transpose   v2.4s,  v3.4s,  v4.4s,  v5.4s
-    SUMSUB_AB   v0.8h,  v1.8h,  v2.8h,  v3.8h
-
-    transpose   v2.4s,  v3.4s,  v0.4s,  v1.4s
-    SUMSUB_AB   v0.8h,  v1.8h,  v2.8h,  v3.8h
-
-    transpose   v2.2d,  v3.2d,  v0.2d,  v1.2d
-    SUMSUB_AB   v0.8h,  v1.8h,  v2.8h,  v3.8h
-
-    trn1        v2.2d,  v0.2d,  v1.2d
-    trn2        v3.2d,  v1.2d,  v0.2d
-
-    addp        v0.8h,  v2.8h,  v3.8h
-
-    st1        {v0.8h}, [x0]
-    ret
-endfunc
-
-function zigzag_interleave_8x8_cavlc_neon, export=1
-    mov        x3,  #7
-    movi       v31.4s, #1
-    ld4        {v0.8h,v1.8h,v2.8h,v3.8h}, [x1],  #64
-    ld4        {v4.8h,v5.8h,v6.8h,v7.8h}, [x1],  #64
-    umax       v16.8h, v0.8h,  v4.8h
-    umax       v17.8h, v1.8h,  v5.8h
-    umax       v18.8h, v2.8h,  v6.8h
-    umax       v19.8h, v3.8h,  v7.8h
-    st1        {v0.8h}, [x0],  #16
-    st1        {v4.8h}, [x0],  #16
-    umaxp      v16.8h, v16.8h, v17.8h
-    umaxp      v18.8h, v18.8h, v19.8h
-    st1        {v1.8h}, [x0],  #16
-    st1        {v5.8h}, [x0],  #16
-    umaxp      v16.8h, v16.8h, v18.8h
-    st1        {v2.8h}, [x0],  #16
-    st1        {v6.8h}, [x0],  #16
-    cmhi       v16.4s, v16.4s, v31.4s
-    st1        {v3.8h}, [x0],  #16
-    and        v16.16b, v16.16b, v31.16b
-    st1        {v7.8h}, [x0],  #16
-    st1        {v16.b}[0],    [x2],  #1
-    st1        {v16.b}[4],    [x2],  x3
-    st1        {v16.b}[8],    [x2],  #1
-    st1        {v16.b}[12],   [x2]
-    ret
-endfunc
-
-function zigzag_scan_4x4_frame_neon, export=1
+function x264_zigzag_scan_4x4_frame_neon, export=1
     movrel      x2, scan4x4_frame
     ld1        {v0.16b,v1.16b}, [x1]
     ld1        {v16.16b,v17.16b}, [x2]
@@ -727,282 +664,3 @@ function zigzag_scan_4x4_frame_neon, export=1
     st1        {v2.16b,v3.16b},   [x0]
     ret
 endfunc
-
-.macro zigzag_sub_4x4 f ac
-function zigzag_sub_4x4\ac\()_\f\()_neon, export=1
-    mov         x9,  #FENC_STRIDE
-    mov         x4,  #FDEC_STRIDE
-    movrel      x5,  sub4x4_\f
-    mov         x6,  x2
-    ld1        {v0.s}[0], [x1], x9
-    ld1        {v0.s}[1], [x1], x9
-    ld1        {v0.s}[2], [x1], x9
-    ld1        {v0.s}[3], [x1], x9
-    ld1        {v16.16b}, [x5]
-    ld1        {v1.s}[0], [x2], x4
-    ld1        {v1.s}[1], [x2], x4
-    ld1        {v1.s}[2], [x2], x4
-    ld1        {v1.s}[3], [x2], x4
-    tbl         v2.16b, {v0.16b}, v16.16b
-    tbl         v3.16b, {v1.16b}, v16.16b
-    st1        {v0.s}[0], [x6], x4
-    usubl       v4.8h,  v2.8b,  v3.8b
-.ifc \ac, ac
-    dup         h7, v4.h[0]
-    ins         v4.h[0], wzr
-    fmov        w5,  s7
-    strh        w5,  [x3]
-.endif
-    usubl2      v5.8h,  v2.16b, v3.16b
-    st1        {v0.s}[1], [x6], x4
-    umax        v6.8h,  v4.8h,  v5.8h
-    umaxv       h6,  v6.8h
-    st1        {v0.s}[2], [x6], x4
-    fmov        w7,  s6
-    st1        {v0.s}[3], [x6], x4
-    cmp         w7, #0
-    st1        {v4.8h,v5.8h},   [x0]
-    cset        w0, ne
-    ret
-endfunc
-.endm
-
-zigzag_sub_4x4 field
-zigzag_sub_4x4 field, ac
-zigzag_sub_4x4 frame
-zigzag_sub_4x4 frame, ac
-
-function zigzag_scan_4x4_field_neon, export=1
-    movrel      x2, scan4x4_field
-    ld1        {v0.8h,v1.8h},   [x1]
-    ld1        {v16.16b},       [x2]
-    tbl         v0.16b, {v0.16b}, v16.16b
-    st1        {v0.8h,v1.8h},   [x0]
-    ret
-endfunc
-
-function zigzag_scan_8x8_frame_neon, export=1
-    movrel      x2,  scan8x8_frame
-    ld1        {v0.8h,v1.8h},   [x1], #32
-    ld1        {v2.8h,v3.8h},   [x1], #32
-    ld1        {v4.8h,v5.8h},   [x1], #32
-    ld1        {v6.8h,v7.8h},   [x1]
-    ld1        {v16.16b,v17.16b}, [x2], #32
-    ld1        {v18.16b,v19.16b}, [x2], #32
-    ld1        {v20.16b,v21.16b}, [x2], #32
-    ld1        {v22.16b,v23.16b}, [x2], #32
-    tbl         v24.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v16.16b
-    tbl         v25.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v17.16b
-    tbl         v26.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v18.16b
-    tbl         v27.16b, {v3.16b,v4.16b,v5.16b,v6.16b}, v19.16b
-    tbl         v28.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v20.16b
-    tbl         v29.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v21.16b
-    tbl         v30.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v22.16b
-    tbl         v31.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v23.16b
-    mov         v25.h[6], v4.h[0]
-    mov         v25.h[7], v5.h[0]
-    mov         v26.h[0], v4.h[1]
-    mov         v27.h[4], v7.h[0]
-    mov         v28.h[7], v4.h[4]
-    mov         v29.h[7], v3.h[6]
-    mov         v30.h[0], v2.h[7]
-    mov         v30.h[1], v3.h[7]
-    st1        {v24.8h,v25.8h}, [x0], #32
-    st1        {v26.8h,v27.8h}, [x0], #32
-    st1        {v28.8h,v29.8h}, [x0], #32
-    st1        {v30.8h,v31.8h}, [x0]
-    ret
-endfunc
-
-#define Z(z)   2*(z), 2*(z)+1
-#define T(x,y) Z(x*8+y)
-const scan8x8_frame, align=5
-    .byte T(0,0), T(1,0), T(0,1), T(0,2)
-    .byte T(1,1), T(2,0), T(3,0), T(2,1)
-    .byte T(1,2), T(0,3), T(0,4), T(1,3)
-    .byte T(2,2), T(3,1), T(4,0), T(5,0)
-    .byte T(4,1), T(3,2), T(2,3), T(1,4)
-    .byte T(0,5), T(0,6), T(1,5), T(2,4)
-#undef T
-#define T(x,y) Z((x-3)*8+y)
-    .byte T(3,3), T(4,2), T(5,1), T(6,0)
-    .byte T(7,0), T(6,1), T(5,2), T(4,3)
-#undef T
-#define T(x,y) Z((x-0)*8+y)
-    .byte T(3,4), T(2,5), T(1,6), T(0,7)
-    .byte T(1,7), T(2,6), T(3,5), T(4,4)
-#undef T
-#define T(x,y) Z((x-4)*8+y)
-    .byte T(5,3), T(6,2), T(7,1), T(7,2)
-    .byte T(6,3), T(5,4), T(4,5), T(3,6)
-    .byte T(2,7), T(3,7), T(4,6), T(5,5)
-    .byte T(6,4), T(7,3), T(7,4), T(6,5)
-    .byte T(5,6), T(4,7), T(5,7), T(6,6)
-    .byte T(7,5), T(7,6), T(6,7), T(7,7)
-endconst
-
-function zigzag_scan_8x8_field_neon, export=1
-    movrel      x2,  scan8x8_field
-    ld1        {v0.8h,v1.8h},   [x1], #32
-    ld1        {v2.8h,v3.8h},   [x1], #32
-    ld1        {v4.8h,v5.8h},   [x1], #32
-    ld1        {v6.8h,v7.8h},   [x1]
-    ld1        {v16.16b,v17.16b}, [x2], #32
-    ld1        {v18.16b,v19.16b}, [x2], #32
-    ld1        {v20.16b,v21.16b}, [x2], #32
-    ld1        {v22.16b}, [x2]
-    ext         v31.16b, v7.16b, v7.16b, #4
-    tbl         v24.16b, {v0.16b,v1.16b},               v16.16b
-    tbl         v25.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v17.16b
-    tbl         v26.16b, {v1.16b,v2.16b,v3.16b,v4.16b}, v18.16b
-    tbl         v27.16b, {v2.16b,v3.16b,v4.16b,v5.16b}, v19.16b
-    tbl         v28.16b, {v3.16b,v4.16b,v5.16b,v6.16b}, v20.16b
-    tbl         v29.16b, {v4.16b,v5.16b,v6.16b},        v21.16b
-    tbl         v30.16b, {v5.16b,v6.16b,v7.16b},        v22.16b
-    ext         v31.16b, v6.16b, v31.16b, #12
-    st1        {v24.8h,v25.8h}, [x0], #32
-    st1        {v26.8h,v27.8h}, [x0], #32
-    st1        {v28.8h,v29.8h}, [x0], #32
-    st1        {v30.8h,v31.8h}, [x0]
-    ret
-endfunc
-
-.macro zigzag_sub8x8 f
-function zigzag_sub_8x8_\f\()_neon, export=1
-    movrel      x4,  sub8x8_\f
-    mov         x5,  #FENC_STRIDE
-    mov         x6,  #FDEC_STRIDE
-    mov         x7,  x2
-    ld1        {v0.d}[0], [x1], x5
-    ld1        {v0.d}[1], [x1], x5
-    ld1        {v1.d}[0], [x1], x5
-    ld1        {v1.d}[1], [x1], x5
-    ld1        {v2.d}[0], [x1], x5
-    ld1        {v2.d}[1], [x1], x5
-    ld1        {v3.d}[0], [x1], x5
-    ld1        {v3.d}[1], [x1]
-    ld1        {v4.d}[0], [x2], x6
-    ld1        {v4.d}[1], [x2], x6
-    ld1        {v5.d}[0], [x2], x6
-    ld1        {v5.d}[1], [x2], x6
-    ld1        {v6.d}[0], [x2], x6
-    ld1        {v6.d}[1], [x2], x6
-    ld1        {v7.d}[0], [x2], x6
-    ld1        {v7.d}[1], [x2]
-    ld1        {v16.16b,v17.16b}, [x4], #32
-    ld1        {v18.16b,v19.16b}, [x4], #32
-    tbl         v24.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v16.16b
-    tbl         v25.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v17.16b
-    tbl         v26.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v18.16b
-    tbl         v27.16b, {v0.16b,v1.16b,v2.16b,v3.16b}, v19.16b
-    tbl         v28.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v16.16b
-    tbl         v29.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v17.16b
-    tbl         v30.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v18.16b
-    tbl         v31.16b, {v4.16b,v5.16b,v6.16b,v7.16b}, v19.16b
-    usubl       v4.8h,  v24.8b,  v28.8b
-    usubl2      v5.8h,  v24.16b, v28.16b
-    usubl       v6.8h,  v25.8b,  v29.8b
-    usubl2      v7.8h,  v25.16b, v29.16b
-    usubl       v16.8h, v26.8b,  v30.8b
-    usubl2      v17.8h, v26.16b, v30.16b
-    usubl       v18.8h, v27.8b,  v31.8b
-    usubl2      v19.8h, v27.16b, v31.16b
-    umax        v20.8h, v4.8h,   v5.8h
-    umax        v21.8h, v6.8h,   v7.8h
-    umax        v22.8h, v16.8h,  v17.8h
-    umax        v23.8h, v18.8h,  v19.8h
-    umax        v20.8h, v20.8h,  v21.8h
-    umax        v21.8h, v22.8h,  v23.8h
-    umax        v20.8h, v20.8h,  v21.8h
-    umaxv       h22,    v20.8h
-    st1        {v0.d}[0], [x7], x6
-    st1        {v0.d}[1], [x7], x6
-    st1        {v1.d}[0], [x7], x6
-    st1        {v1.d}[1], [x7], x6
-    st1        {v2.d}[0], [x7], x6
-    st1        {v2.d}[1], [x7], x6
-    st1        {v3.d}[0], [x7], x6
-    st1        {v3.d}[1], [x7]
-    st1        {v4.8h,v5.8h},   [x0], #32
-    st1        {v6.8h,v7.8h},   [x0], #32
-    st1        {v16.8h,v17.8h}, [x0], #32
-    st1        {v18.8h,v19.8h}, [x0]
-    fmov        w9,  s22
-    cmp         w9, #0
-    cset        w0, ne
-    ret
-endfunc
-.endm
-
-zigzag_sub8x8 field
-zigzag_sub8x8 frame
-
-#undef T
-#define T(x,y) Z(x*8+y)
-const scan8x8_field, align=5
-    .byte T(0,0), T(0,1), T(0,2), T(1,0)
-    .byte T(1,1), T(0,3), T(0,4), T(1,2)
-    .byte T(2,0), T(1,3), T(0,5), T(0,6)
-    .byte T(0,7), T(1,4), T(2,1), T(3,0)
-#undef T
-#define T(x,y) Z((x-1)*8+y)
-    .byte T(2,2), T(1,5), T(1,6), T(1,7)
-    .byte T(2,3), T(3,1), T(4,0), T(3,2)
-#undef T
-#define T(x,y) Z((x-2)*8+y)
-    .byte T(2,4), T(2,5), T(2,6), T(2,7)
-    .byte T(3,3), T(4,1), T(5,0), T(4,2)
-#undef T
-#define T(x,y) Z((x-3)*8+y)
-    .byte T(3,4), T(3,5), T(3,6), T(3,7)
-    .byte T(4,3), T(5,1), T(6,0), T(5,2)
-#undef T
-#define T(x,y) Z((x-4)*8+y)
-    .byte T(4,4), T(4,5), T(4,6), T(4,7)
-    .byte T(5,3), T(6,1), T(6,2), T(5,4)
-#undef T
-#define T(x,y) Z((x-5)*8+y)
-    .byte T(5,5), T(5,6), T(5,7), T(6,3)
-    .byte T(7,0), T(7,1), T(6,4), T(6,5)
-endconst
-
-
-#undef T
-#define T(y,x) x*8+y
-const sub8x8_frame, align=5
-    .byte T(0,0), T(1,0), T(0,1), T(0,2)
-    .byte T(1,1), T(2,0), T(3,0), T(2,1)
-    .byte T(1,2), T(0,3), T(0,4), T(1,3)
-    .byte T(2,2), T(3,1), T(4,0), T(5,0)
-    .byte T(4,1), T(3,2), T(2,3), T(1,4)
-    .byte T(0,5), T(0,6), T(1,5), T(2,4)
-    .byte T(3,3), T(4,2), T(5,1), T(6,0)
-    .byte T(7,0), T(6,1), T(5,2), T(4,3)
-    .byte T(3,4), T(2,5), T(1,6), T(0,7)
-    .byte T(1,7), T(2,6), T(3,5), T(4,4)
-    .byte T(5,3), T(6,2), T(7,1), T(7,2)
-    .byte T(6,3), T(5,4), T(4,5), T(3,6)
-    .byte T(2,7), T(3,7), T(4,6), T(5,5)
-    .byte T(6,4), T(7,3), T(7,4), T(6,5)
-    .byte T(5,6), T(4,7), T(5,7), T(6,6)
-    .byte T(7,5), T(7,6), T(6,7), T(7,7)
-endconst
-
-const sub8x8_field, align=5
-    .byte T(0,0), T(0,1), T(0,2), T(1,0)
-    .byte T(1,1), T(0,3), T(0,4), T(1,2)
-    .byte T(2,0), T(1,3), T(0,5), T(0,6)
-    .byte T(0,7), T(1,4), T(2,1), T(3,0)
-    .byte T(2,2), T(1,5), T(1,6), T(1,7)
-    .byte T(2,3), T(3,1), T(4,0), T(3,2)
-    .byte T(2,4), T(2,5), T(2,6), T(2,7)
-    .byte T(3,3), T(4,1), T(5,0), T(4,2)
-    .byte T(3,4), T(3,5), T(3,6), T(3,7)
-    .byte T(4,3), T(5,1), T(6,0), T(5,2)
-    .byte T(4,4), T(4,5), T(4,6), T(4,7)
-    .byte T(5,3), T(6,1), T(6,2), T(5,4)
-    .byte T(5,5), T(5,6), T(5,7), T(6,3)
-    .byte T(7,0), T(7,1), T(6,4), T(6,5)
-    .byte T(6,6), T(6,7), T(7,2), T(7,3)
-    .byte T(7,4), T(7,5), T(7,6), T(7,7)
-endconst

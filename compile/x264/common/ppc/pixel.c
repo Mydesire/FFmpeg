@@ -1,7 +1,7 @@
 /*****************************************************************************
  * pixel.c: ppc pixel metrics
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2014 x264 project
  *
  * Authors: Eric Petit <eric.petit@lapsus.org>
  *          Guillaume Poirier <gpoirier@mplayerhq.hu>
@@ -26,7 +26,7 @@
 
 #include "common/common.h"
 #include "ppccommon.h"
-#include "pixel.h"
+#include "../predict.h"
 
 #if !HIGH_BIT_DEPTH
 /***********************************************************************
@@ -40,12 +40,13 @@ static int name( uint8_t *pix1, intptr_t i_pix1,       \
     ALIGNED_16( int sum );                             \
                                                        \
     LOAD_ZERO;                                         \
+    PREP_LOAD;                                         \
     vec_u8_t  pix1v, pix2v;                            \
     vec_s32_t sumv = zero_s32v;                        \
     for( int y = 0; y < ly; y++ )                      \
     {                                                  \
-        pix1v = vec_vsx_ld( 0, pix1 );                 \
-        pix2v = vec_vsx_ld( 0, pix2 );                 \
+        VEC_LOAD_G( pix1, pix1v, lx, vec_u8_t );       \
+        VEC_LOAD_G( pix2, pix2v, lx, vec_u8_t );       \
         sumv = (vec_s32_t) vec_sum4s(                  \
                    vec_sub( vec_max( pix1v, pix2v ),   \
                             vec_min( pix1v, pix2v ) ), \
@@ -124,14 +125,19 @@ static int pixel_satd_4x4_altivec( uint8_t *pix1, intptr_t i_pix1,
     ALIGNED_16( int i_satd );
 
     PREP_DIFF;
+    PREP_LOAD_SRC( pix1 );
     vec_s16_t diff0v, diff1v, diff2v, diff3v;
     vec_s16_t temp0v, temp1v, temp2v, temp3v;
     vec_s32_t satdv;
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff3v );
+    vec_u8_t _offset1v_ = vec_lvsl(0, pix2);
+    vec_u8_t _offset2v_ = vec_lvsl(0, pix2 + i_pix2);
+
+
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff0v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff1v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff2v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff3v, offset2v );
 
     /* Hadamar H */
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
@@ -168,10 +174,14 @@ static int pixel_satd_4x8_altivec( uint8_t *pix1, intptr_t i_pix1,
     vec_s16_t temp0v, temp1v, temp2v, temp3v;
     vec_s32_t satdv;
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff3v );
+    PREP_LOAD_SRC( pix1 );
+    vec_u8_t _offset1v_ = vec_lvsl(0, pix2);
+    vec_u8_t _offset2v_ = vec_lvsl(0, pix2 + i_pix2);
+
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff0v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff1v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff2v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff3v, offset2v );
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
                  temp0v, temp1v, temp2v, temp3v );
     VEC_TRANSPOSE_4( temp0v, temp1v, temp2v, temp3v,
@@ -183,10 +193,10 @@ static int pixel_satd_4x8_altivec( uint8_t *pix1, intptr_t i_pix1,
     VEC_ADD_ABS( temp2v, satdv,     satdv );
     VEC_ADD_ABS( temp3v, satdv,     satdv );
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff3v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff0v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff1v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff2v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 4, diff3v, offset2v );
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
                  temp0v, temp1v, temp2v, temp3v );
     VEC_TRANSPOSE_4( temp0v, temp1v, temp2v, temp3v,
@@ -220,10 +230,15 @@ static int pixel_satd_8x4_altivec( uint8_t *pix1, intptr_t i_pix1,
               temp4v, temp5v, temp6v, temp7v;
     vec_s32_t satdv;
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v );
+
+    PREP_LOAD_SRC( pix1 );
+    vec_u8_t _offset1v_ = vec_lvsl(0, pix2);
+    vec_u8_t _offset2v_ = vec_lvsl(0, pix2 + i_pix2);
+
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v, offset2v );
 
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
                  temp0v, temp1v, temp2v, temp3v );
@@ -269,14 +284,19 @@ static int pixel_satd_8x8_altivec( uint8_t *pix1, intptr_t i_pix1,
               temp4v, temp5v, temp6v, temp7v;
     vec_s32_t satdv;
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v );
+    vec_u8_t _offset1_1v_ = vec_lvsl(0, pix1);
+    vec_u8_t _offset1_2v_ = vec_lvsl(0, pix1 + i_pix1);
+    vec_u8_t _offset2_1v_ = vec_lvsl(0, pix2);
+    vec_u8_t _offset2_2v_ = vec_lvsl(0, pix2 + i_pix2);
+
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff0v, offset1_1v, offset2_1v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff1v, offset1_2v, offset2_2v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff2v, offset1_1v, offset2_1v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff3v, offset1_2v, offset2_2v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff4v, offset1_1v, offset2_1v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff5v, offset1_2v, offset2_2v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff6v, offset1_1v, offset2_1v );
+    VEC_DIFF_H_OFFSET( pix1, i_pix1, pix2, i_pix2, 8, diff7v, offset1_2v, offset2_2v );
 
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
                  temp0v, temp1v, temp2v, temp3v );
@@ -324,14 +344,18 @@ static int pixel_satd_8x16_altivec( uint8_t *pix1, intptr_t i_pix1,
               temp4v, temp5v, temp6v, temp7v;
     vec_s32_t satdv;
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v );
+    PREP_LOAD_SRC( pix1 );
+    vec_u8_t _offset1v_ = vec_lvsl(0, pix2);
+    vec_u8_t _offset2v_ = vec_lvsl(0, pix2 + i_pix2);
+
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v , offset1v);
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v, offset2v );
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
                  temp0v, temp1v, temp2v, temp3v );
     VEC_HADAMAR( diff4v, diff5v, diff6v, diff7v,
@@ -353,14 +377,14 @@ static int pixel_satd_8x16_altivec( uint8_t *pix1, intptr_t i_pix1,
     VEC_ADD_ABS( temp6v, satdv,     satdv );
     VEC_ADD_ABS( temp7v, satdv,     satdv );
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v, offset2v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v, offset1v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v, offset2v );
     VEC_HADAMAR( diff0v, diff1v, diff2v, diff3v,
                  temp0v, temp1v, temp2v, temp3v );
     VEC_HADAMAR( diff4v, diff5v, diff6v, diff7v,
@@ -398,6 +422,8 @@ static int pixel_satd_16x8_altivec( uint8_t *pix1, intptr_t i_pix1,
     ALIGNED_16( int i_satd );
 
     LOAD_ZERO;
+    PREP_LOAD;
+    PREP_LOAD_SRC( pix2 );
     vec_s32_t satdv;
     vec_s16_t pix1v, pix2v;
     vec_s16_t diffh0v, diffh1v, diffh2v, diffh3v,
@@ -480,6 +506,7 @@ static int pixel_satd_16x16_altivec( uint8_t *pix1, intptr_t i_pix1,
     ALIGNED_16( int i_satd );
 
     LOAD_ZERO;
+    PREP_LOAD;
     vec_s32_t satdv;
     vec_s16_t pix1v, pix2v;
     vec_s16_t diffh0v, diffh1v, diffh2v, diffh3v,
@@ -488,6 +515,8 @@ static int pixel_satd_16x16_altivec( uint8_t *pix1, intptr_t i_pix1,
               diffl4v, diffl5v, diffl6v, diffl7v;
     vec_s16_t temp0v, temp1v, temp2v, temp3v,
               temp4v, temp5v, temp6v, temp7v;
+    PREP_LOAD_SRC( pix2 );
+
 
     VEC_DIFF_HL( pix1, i_pix1, pix2, i_pix2, diffh0v, diffl0v );
     VEC_DIFF_HL( pix1, i_pix1, pix2, i_pix2, diffh1v, diffl1v );
@@ -611,7 +640,11 @@ static void pixel_sad_x4_16x16_altivec( uint8_t *fenc,
     ALIGNED_16( int sum3 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v, pix3v;
+    //vec_u8_t perm0v, perm1v, perm2v, perm3v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm3vA, perm0vB, perm1vB, perm2vB, perm3vB;
+
     vec_s32_t sum0v, sum1v, sum2v, sum3v;
 
     sum0v = vec_splat_s32(0);
@@ -619,21 +652,39 @@ static void pixel_sad_x4_16x16_altivec( uint8_t *fenc,
     sum2v = vec_splat_s32(0);
     sum3v = vec_splat_s32(0);
 
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+    perm3vA = vec_lvsl(0, pix3);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+    perm3vB = vec_lvsl(0, pix3 + i_stride);
+
     for( int y = 0; y < 8; y++ )
     {
-        pix0v = vec_vsx_ld( 0, pix0 );
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld( 0, pix1 );
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld( 0, pix2 );
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld( 0, pix3 );
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vA);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -641,19 +692,27 @@ static void pixel_sad_x4_16x16_altivec( uint8_t *fenc,
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
         sum3v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix3v ), vec_min( fencv, pix3v ) ), (vec_u32_t) sum3v );
 
-        pix0v = vec_vsx_ld( 0, pix0 );
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld( 0, pix1 );
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld( 0, pix2 );
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld( 0, pix3 );
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vB);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -692,42 +751,65 @@ static void pixel_sad_x3_16x16_altivec( uint8_t *fenc, uint8_t *pix0,
     ALIGNED_16( int sum2 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv; // temporary load vectors
     vec_u8_t fencv, pix0v, pix1v, pix2v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm0vB, perm1vB, perm2vB;
+
     vec_s32_t sum0v, sum1v, sum2v;
 
     sum0v = vec_splat_s32(0);
     sum1v = vec_splat_s32(0);
     sum2v = vec_splat_s32(0);
 
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+
     for( int y = 0; y < 8; y++ )
     {
-        pix0v = vec_vsx_ld( 0, pix0 );
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld( 0, pix1 );
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld( 0, pix2 );
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
         sum1v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix1v ), vec_min( fencv, pix1v ) ), (vec_u32_t) sum1v );
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
 
-        pix0v = vec_vsx_ld( 0, pix0 );
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
 
-        pix1v = vec_vsx_ld( 0, pix1 );
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld( 0, pix2 );
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -761,7 +843,10 @@ static void pixel_sad_x4_16x8_altivec( uint8_t *fenc, uint8_t *pix0, uint8_t *pi
     ALIGNED_16( int sum3 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v, pix3v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm3vA, perm0vB, perm1vB, perm2vB, perm3vB;
+
     vec_s32_t sum0v, sum1v, sum2v, sum3v;
 
     sum0v = vec_splat_s32(0);
@@ -769,21 +854,39 @@ static void pixel_sad_x4_16x8_altivec( uint8_t *fenc, uint8_t *pix0, uint8_t *pi
     sum2v = vec_splat_s32(0);
     sum3v = vec_splat_s32(0);
 
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+    perm3vA = vec_lvsl(0, pix3);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+    perm3vB = vec_lvsl(0, pix3 + i_stride);
+
     for( int y = 0; y < 4; y++ )
     {
-        pix0v = vec_vsx_ld( 0, pix0 );
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld( 0, pix1 );
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
-        fencv = vec_ld( 0, fenc );
+        fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld( 0, pix2 );
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld( 0, pix3 );
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vA);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -791,19 +894,27 @@ static void pixel_sad_x4_16x8_altivec( uint8_t *fenc, uint8_t *pix0, uint8_t *pi
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
         sum3v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix3v ), vec_min( fencv, pix3v ) ), (vec_u32_t) sum3v );
 
-        pix0v = vec_vsx_ld( 0, pix0 );
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld( 0, pix1 );
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld( 0, pix2 );
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld( 0, pix3 );
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vB);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -842,41 +953,64 @@ static void pixel_sad_x3_16x8_altivec( uint8_t *fenc, uint8_t *pix0,
     ALIGNED_16( int sum2 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm0vB, perm1vB, perm2vB;
+
     vec_s32_t sum0v, sum1v, sum2v;
 
     sum0v = vec_splat_s32(0);
     sum1v = vec_splat_s32(0);
     sum2v = vec_splat_s32(0);
 
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+
     for( int y = 0; y < 4; y++ )
     {
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
         sum1v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix1v ), vec_min( fencv, pix1v ) ), (vec_u32_t) sum1v );
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
 
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
         fencv = vec_ld(0, fenc);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -913,7 +1047,10 @@ static void pixel_sad_x4_8x16_altivec( uint8_t *fenc,
     ALIGNED_16( int sum3 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v, pix3v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm3vA, perm0vB, perm1vB, perm2vB, perm3vB, permEncv;
+
     vec_s32_t sum0v, sum1v, sum2v, sum3v;
 
     sum0v = vec_splat_s32(0);
@@ -921,21 +1058,41 @@ static void pixel_sad_x4_8x16_altivec( uint8_t *fenc,
     sum2v = vec_splat_s32(0);
     sum3v = vec_splat_s32(0);
 
+    permEncv = vec_lvsl(0, fenc);
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+    perm3vA = vec_lvsl(0, pix3);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+    perm3vB = vec_lvsl(0, pix3 + i_stride);
+
     for( int y = 0; y < 8; y++ )
     {
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld(0, pix3);
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vA);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -943,19 +1100,28 @@ static void pixel_sad_x4_8x16_altivec( uint8_t *fenc,
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
         sum3v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix3v ), vec_min( fencv, pix3v ) ), (vec_u32_t) sum3v );
 
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld(0, pix3);
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vB);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -994,41 +1160,67 @@ static void pixel_sad_x3_8x16_altivec( uint8_t *fenc, uint8_t *pix0,
     ALIGNED_16( int sum2 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm0vB, perm1vB, perm2vB,permEncv;
+
     vec_s32_t sum0v, sum1v, sum2v;
 
     sum0v = vec_splat_s32(0);
     sum1v = vec_splat_s32(0);
     sum2v = vec_splat_s32(0);
 
+    permEncv = vec_lvsl(0, fenc);
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+
     for( int y = 0; y < 8; y++ )
     {
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
         sum1v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix1v ), vec_min( fencv, pix1v ) ), (vec_u32_t) sum1v );
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
 
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -1064,7 +1256,10 @@ static void pixel_sad_x4_8x8_altivec( uint8_t *fenc,
     ALIGNED_16( int sum3 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v, pix3v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm3vA, perm0vB, perm1vB, perm2vB, perm3vB, permEncv;
+
     vec_s32_t sum0v, sum1v, sum2v, sum3v;
 
     sum0v = vec_splat_s32(0);
@@ -1072,21 +1267,41 @@ static void pixel_sad_x4_8x8_altivec( uint8_t *fenc,
     sum2v = vec_splat_s32(0);
     sum3v = vec_splat_s32(0);
 
+    permEncv = vec_lvsl(0, fenc);
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+    perm3vA = vec_lvsl(0, pix3);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+    perm3vB = vec_lvsl(0, pix3 + i_stride);
+
     for( int y = 0; y < 4; y++ )
     {
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld(0, pix3);
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vA);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -1094,19 +1309,28 @@ static void pixel_sad_x4_8x8_altivec( uint8_t *fenc,
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
         sum3v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix3v ), vec_min( fencv, pix3v ) ), (vec_u32_t) sum3v );
 
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
-        pix3v = vec_vsx_ld(0, pix3);
+        temp_lv = vec_ld(0, pix3);
+        temp_hv = vec_ld(16, pix3);
+        pix3v = vec_perm(temp_lv, temp_hv, perm3vB);
         pix3 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -1145,41 +1369,67 @@ static void pixel_sad_x3_8x8_altivec( uint8_t *fenc, uint8_t *pix0,
     ALIGNED_16( int sum2 );
 
     LOAD_ZERO;
+    vec_u8_t temp_lv, temp_hv;
     vec_u8_t fencv, pix0v, pix1v, pix2v;
+    vec_u8_t perm0vA, perm1vA, perm2vA, perm0vB, perm1vB, perm2vB,  permEncv;
+
     vec_s32_t sum0v, sum1v, sum2v;
 
     sum0v = vec_splat_s32(0);
     sum1v = vec_splat_s32(0);
     sum2v = vec_splat_s32(0);
 
+    permEncv = vec_lvsl(0, fenc);
+    perm0vA = vec_lvsl(0, pix0);
+    perm1vA = vec_lvsl(0, pix1);
+    perm2vA = vec_lvsl(0, pix2);
+
+    perm0vB = vec_lvsl(0, pix0 + i_stride);
+    perm1vB = vec_lvsl(0, pix1 + i_stride);
+    perm2vB = vec_lvsl(0, pix2 + i_stride);
+
     for( int y = 0; y < 4; y++ )
     {
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vA);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vA);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vA);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
         sum1v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix1v ), vec_min( fencv, pix1v ) ), (vec_u32_t) sum1v );
         sum2v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix2v ), vec_min( fencv, pix2v ) ), (vec_u32_t) sum2v );
 
-        pix0v = vec_vsx_ld(0, pix0);
+        temp_lv = vec_ld(0, pix0);
+        temp_hv = vec_ld(16, pix0);
+        pix0v = vec_perm(temp_lv, temp_hv, perm0vB);
         pix0 += i_stride;
 
-        pix1v = vec_vsx_ld(0, pix1);
+        temp_lv = vec_ld(0, pix1);
+        temp_hv = vec_ld(16, pix1);
+        pix1v = vec_perm(temp_lv, temp_hv, perm1vB);
         pix1 += i_stride;
 
-        fencv = vec_vsx_ld(0, fenc);
+        temp_lv = vec_ld(0, fenc);
+        fencv = vec_perm(temp_lv, temp_hv, permEncv);
         fenc += FENC_STRIDE;
 
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2v = vec_perm(temp_lv, temp_hv, perm2vB);
         pix2 += i_stride;
 
         sum0v = (vec_s32_t) vec_sum4s( vec_sub( vec_max( fencv, pix0v ), vec_min( fencv, pix0v ) ), (vec_u32_t) sum0v );
@@ -1208,8 +1458,8 @@ static void pixel_sad_x3_8x8_altivec( uint8_t *fenc, uint8_t *pix0,
 * SSD routines
 **********************************************************************/
 
-static int pixel_ssd_16x16_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
-                                    uint8_t *pix2, intptr_t i_stride_pix2 )
+static int pixel_ssd_16x16_altivec ( uint8_t *pix1, intptr_t i_stride_pix1,
+                                     uint8_t *pix2, intptr_t i_stride_pix2 )
 {
     ALIGNED_16( int sum );
 
@@ -1217,10 +1467,17 @@ static int pixel_ssd_16x16_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
     vec_u8_t  pix1vA, pix2vA, pix1vB, pix2vB;
     vec_u32_t sumv;
     vec_u8_t maxA, minA, diffA, maxB, minB, diffB;
+    vec_u8_t temp_lv, temp_hv;
+    vec_u8_t permA, permB;
 
     sumv = vec_splat_u32(0);
 
-    pix2vA = vec_vsx_ld(0, pix2);
+    permA = vec_lvsl(0, pix2);
+    permB = vec_lvsl(0, pix2 + i_stride_pix2);
+
+    temp_lv = vec_ld(0, pix2);
+    temp_hv = vec_ld(16, pix2);
+    pix2vA = vec_perm(temp_lv, temp_hv, permA);
     pix1vA = vec_ld(0, pix1);
 
     for( int y = 0; y < 7; y++ )
@@ -1231,7 +1488,9 @@ static int pixel_ssd_16x16_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
         maxA = vec_max(pix1vA, pix2vA);
         minA = vec_min(pix1vA, pix2vA);
 
-        pix2vB = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2vB = vec_perm(temp_lv, temp_hv, permB);
         pix1vB = vec_ld(0, pix1);
 
         diffA = vec_sub(maxA, minA);
@@ -1243,7 +1502,9 @@ static int pixel_ssd_16x16_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
         maxB = vec_max(pix1vB, pix2vB);
         minB = vec_min(pix1vB, pix2vB);
 
-        pix2vA = vec_vsx_ld(0, pix2);
+        temp_lv = vec_ld(0, pix2);
+        temp_hv = vec_ld(16, pix2);
+        pix2vA = vec_perm(temp_lv, temp_hv, permA);
         pix1vA = vec_ld(0, pix1);
 
         diffB = vec_sub(maxB, minB);
@@ -1253,7 +1514,9 @@ static int pixel_ssd_16x16_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
     pix1 += i_stride_pix1;
     pix2 += i_stride_pix2;
 
-    pix2vB = vec_vsx_ld(0, pix2);
+    temp_lv = vec_ld(0, pix2);
+    temp_hv = vec_ld(16, pix2);
+    pix2vB = vec_perm(temp_lv, temp_hv, permB);
     pix1vB = vec_ld(0, pix1);
 
     maxA = vec_max(pix1vA, pix2vA);
@@ -1274,8 +1537,8 @@ static int pixel_ssd_16x16_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
     return sum;
 }
 
-static int pixel_ssd_8x8_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
-                                  uint8_t *pix2, intptr_t i_stride_pix2 )
+static int pixel_ssd_8x8_altivec ( uint8_t *pix1, intptr_t i_stride_pix1,
+                                   uint8_t *pix2, intptr_t i_stride_pix2 )
 {
     ALIGNED_16( int sum );
 
@@ -1283,15 +1546,25 @@ static int pixel_ssd_8x8_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
     vec_u8_t  pix1v, pix2v;
     vec_u32_t sumv;
     vec_u8_t maxv, minv, diffv;
+    vec_u8_t temp_lv, temp_hv;
+    vec_u8_t perm1v, perm2v;
 
     const vec_u32_t sel = (vec_u32_t)CV(-1,-1,0,0);
 
     sumv = vec_splat_u32(0);
 
+    perm1v = vec_lvsl(0, pix1);
+    perm2v = vec_lvsl(0, pix2);
+
     for( int y = 0; y < 8; y++ )
     {
-        pix1v = vec_vsx_ld(0, pix1);
-        pix2v = vec_vsx_ld(0, pix2);
+        temp_hv = vec_ld(0, pix1);
+        temp_lv = vec_ld(7, pix1);
+        pix1v = vec_perm(temp_hv, temp_lv, perm1v);
+
+        temp_hv = vec_ld(0, pix2);
+        temp_lv = vec_ld(7, pix2);
+        pix2v = vec_perm(temp_hv, temp_lv, perm2v);
 
         maxv = vec_max(pix1v, pix2v);
         minv = vec_min(pix1v, pix2v);
@@ -1316,7 +1589,7 @@ static int pixel_ssd_8x8_altivec( uint8_t *pix1, intptr_t i_stride_pix1,
 /****************************************************************************
  * variance
  ****************************************************************************/
-static uint64_t pixel_var_16x16_altivec( uint8_t *pix, intptr_t i_stride )
+static uint64_t x264_pixel_var_16x16_altivec( uint8_t *pix, intptr_t i_stride )
 {
     ALIGNED_16(uint32_t sum_tab[4]);
     ALIGNED_16(uint32_t sqr_tab[4]);
@@ -1343,7 +1616,7 @@ static uint64_t pixel_var_16x16_altivec( uint8_t *pix, intptr_t i_stride )
     return sum + ((uint64_t)sqr<<32);
 }
 
-static uint64_t pixel_var_8x8_altivec( uint8_t *pix, intptr_t i_stride )
+static uint64_t x264_pixel_var_8x8_altivec( uint8_t *pix, intptr_t i_stride )
 {
     ALIGNED_16(uint32_t sum_tab[4]);
     ALIGNED_16(uint32_t sqr_tab[4]);
@@ -1447,18 +1720,20 @@ static int pixel_sa8d_8x8_core_altivec( uint8_t *pix1, intptr_t i_pix1,
     int32_t i_satd=0;
 
     PREP_DIFF;
+    PREP_LOAD_SRC( pix1 );
+    PREP_LOAD_SRC( pix2 );
 
     vec_s16_t diff0v, diff1v, diff2v, diff3v, diff4v, diff5v, diff6v, diff7v;
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff0v, pix2 );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff1v, pix2 );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff2v, pix2 );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff3v, pix2 );
 
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v );
-    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff4v, pix2 );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff5v, pix2 );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff6v, pix2 );
+    VEC_DIFF_H( pix1, i_pix1, pix2, i_pix2, 8, diff7v, pix2 );
 
     vec_s16_t sa8d0v, sa8d1v, sa8d2v, sa8d3v, sa8d4v, sa8d5v, sa8d6v, sa8d7v;
 
@@ -1538,15 +1813,9 @@ static int pixel_sa8d_16x16_altivec( uint8_t *pix1, intptr_t i_pix1,
     d3 = vec_sub(t1, t3);                           \
 }
 
-#ifdef WORDS_BIGENDIAN
-#define vec_perm_extend_s16(val, perm) (vec_s16_t)vec_perm(val, zero_u8v, perm)
-#else
-#define vec_perm_extend_s16(val, perm) (vec_s16_t)vec_perm(zero_u8v, val, perm)
-#endif
-
 #define VEC_LOAD_HIGH( p, num )                                    \
     vec_u8_t pix8_##num = vec_ld( stride*num, p );                 \
-    vec_s16_t pix16_s##num = vec_perm_extend_s16( pix8_##num, perm ); \
+    vec_s16_t pix16_s##num = (vec_s16_t)vec_perm(pix8_##num, zero_u8v, perm); \
     vec_s16_t pix16_d##num;
 
 static uint64_t pixel_hadamard_ac_altivec( uint8_t *pix, intptr_t stride, const vec_u8_t perm )
@@ -1635,7 +1904,7 @@ static const vec_u8_t hadamard_permtab[] =
        0x1C,0x0C,0x1D,0x0D, 0x1E,0x0E,0x1F,0x0F )
  };
 
-static uint64_t pixel_hadamard_ac_16x16_altivec( uint8_t *pix, intptr_t stride )
+static uint64_t x264_pixel_hadamard_ac_16x16_altivec( uint8_t *pix, intptr_t stride )
 {
     int idx =  ((uintptr_t)pix & 8) >> 3;
     vec_u8_t permh = hadamard_permtab[idx];
@@ -1647,7 +1916,7 @@ static uint64_t pixel_hadamard_ac_16x16_altivec( uint8_t *pix, intptr_t stride )
     return ((sum>>34)<<32) + ((uint32_t)sum>>1);
 }
 
-static uint64_t pixel_hadamard_ac_16x8_altivec( uint8_t *pix, intptr_t stride )
+static uint64_t x264_pixel_hadamard_ac_16x8_altivec( uint8_t *pix, intptr_t stride )
 {
     int idx =  ((uintptr_t)pix & 8) >> 3;
     vec_u8_t permh = hadamard_permtab[idx];
@@ -1657,7 +1926,7 @@ static uint64_t pixel_hadamard_ac_16x8_altivec( uint8_t *pix, intptr_t stride )
     return ((sum>>34)<<32) + ((uint32_t)sum>>1);
 }
 
-static uint64_t pixel_hadamard_ac_8x16_altivec( uint8_t *pix, intptr_t stride )
+static uint64_t x264_pixel_hadamard_ac_8x16_altivec( uint8_t *pix, intptr_t stride )
 {
     vec_u8_t perm = hadamard_permtab[ (((uintptr_t)pix & 8) >> 3) ];
     uint64_t sum = pixel_hadamard_ac_altivec( pix, stride, perm );
@@ -1665,7 +1934,7 @@ static uint64_t pixel_hadamard_ac_8x16_altivec( uint8_t *pix, intptr_t stride )
     return ((sum>>34)<<32) + ((uint32_t)sum>>1);
 }
 
-static uint64_t pixel_hadamard_ac_8x8_altivec( uint8_t *pix, intptr_t stride )
+static uint64_t x264_pixel_hadamard_ac_8x8_altivec( uint8_t *pix, intptr_t stride )
 {
     vec_u8_t perm = hadamard_permtab[ (((uintptr_t)pix & 8) >> 3) ];
     uint64_t sum = pixel_hadamard_ac_altivec( pix, stride, perm );
@@ -1684,14 +1953,17 @@ static void ssim_4x4x2_core_altivec( const uint8_t *pix1, intptr_t stride1,
 
     vec_u8_t pix1v, pix2v;
     vec_u32_t s1v, s2v, ssv, s12v;
+    PREP_LOAD;
+    PREP_LOAD_SRC (pix1);
+    PREP_LOAD_SRC (pix2);
     LOAD_ZERO;
 
     s1v = s2v = ssv = s12v = zero_u32v;
 
     for( int y = 0; y < 4; y++ )
     {
-        pix1v = vec_vsx_ld( y*stride1, pix1 );
-        pix2v = vec_vsx_ld( y*stride2, pix2 );
+        VEC_LOAD( &pix1[y*stride1], pix1v, 16, vec_u8_t, pix1 );
+        VEC_LOAD( &pix2[y*stride2], pix2v, 16, vec_u8_t, pix2 );
 
         s1v = vec_sum4s( pix1v, s1v );
         s2v = vec_sum4s( pix2v, s2v );
@@ -1740,7 +2012,7 @@ SATD_X( 4x4 )
 
 
 #define INTRA_MBCMP_8x8( mbcmp )\
-static void intra_##mbcmp##_x3_8x8_altivec( uint8_t *fenc, uint8_t edge[36], int res[3] )\
+void intra_##mbcmp##_x3_8x8_altivec( uint8_t *fenc, uint8_t edge[36], int res[3] )\
 {\
     ALIGNED_8( uint8_t pix[8*FDEC_STRIDE] );\
     x264_predict_8x8_v_c( pix, edge );\
@@ -1755,7 +2027,7 @@ INTRA_MBCMP_8x8(sad)
 INTRA_MBCMP_8x8(sa8d)
 
 #define INTRA_MBCMP( mbcmp, size, pred1, pred2, pred3, chroma )\
-static void intra_##mbcmp##_x3_##size##x##size##chroma##_altivec( uint8_t *fenc, uint8_t *fdec, int res[3] )\
+void intra_##mbcmp##_x3_##size##x##size##chroma##_altivec( uint8_t *fenc, uint8_t *fdec, int res[3] )\
 {\
     x264_predict_##size##x##size##chroma##_##pred1##_c( fdec );\
     res[0] = pixel_##mbcmp##_##size##x##size##_altivec( fdec, FDEC_STRIDE, fenc, FENC_STRIDE );\
@@ -1775,7 +2047,7 @@ INTRA_MBCMP(satd, 16, v, h, dc, )
 /****************************************************************************
  * x264_pixel_init:
  ****************************************************************************/
-void x264_pixel_init_altivec( x264_pixel_function_t *pixf )
+void x264_pixel_altivec_init( x264_pixel_function_t *pixf )
 {
 #if !HIGH_BIT_DEPTH
     pixf->sad[PIXEL_16x16]  = pixel_sad_16x16_altivec;
@@ -1833,13 +2105,13 @@ void x264_pixel_init_altivec( x264_pixel_function_t *pixf )
 
     pixf->intra_sa8d_x3_8x8   = intra_sa8d_x3_8x8_altivec;
 
-    pixf->var[PIXEL_16x16] = pixel_var_16x16_altivec;
-    pixf->var[PIXEL_8x8]   = pixel_var_8x8_altivec;
+    pixf->var[PIXEL_16x16] = x264_pixel_var_16x16_altivec;
+    pixf->var[PIXEL_8x8]   = x264_pixel_var_8x8_altivec;
 
-    pixf->hadamard_ac[PIXEL_16x16] = pixel_hadamard_ac_16x16_altivec;
-    pixf->hadamard_ac[PIXEL_16x8]  = pixel_hadamard_ac_16x8_altivec;
-    pixf->hadamard_ac[PIXEL_8x16]  = pixel_hadamard_ac_8x16_altivec;
-    pixf->hadamard_ac[PIXEL_8x8]   = pixel_hadamard_ac_8x8_altivec;
+    pixf->hadamard_ac[PIXEL_16x16] = x264_pixel_hadamard_ac_16x16_altivec;
+    pixf->hadamard_ac[PIXEL_16x8]  = x264_pixel_hadamard_ac_16x8_altivec;
+    pixf->hadamard_ac[PIXEL_8x16]  = x264_pixel_hadamard_ac_8x16_altivec;
+    pixf->hadamard_ac[PIXEL_8x8]   = x264_pixel_hadamard_ac_8x8_altivec;
 
     pixf->ssim_4x4x2_core = ssim_4x4x2_core_altivec;
 #endif // !HIGH_BIT_DEPTH

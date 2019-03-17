@@ -1,9 +1,7 @@
 /*****************************************************************************
  * mc.h: aarch64 motion compensation
  *****************************************************************************
- * Copyright (C) 2014-2017 x264 project
- *
- * Authors: Janne Grunau <janne-x264@jannau.net>
+ * Copyright (C) 2014 x264 project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +24,6 @@
 #ifndef X264_AARCH64_MC_H
 #define X264_AARCH64_MC_H
 
-#define x264_mc_init_aarch64 x264_template(mc_init_aarch64)
 void x264_mc_init_aarch64( int cpu, x264_mc_functions_t *pf );
 
 #endif

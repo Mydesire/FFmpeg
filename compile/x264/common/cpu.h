@@ -1,7 +1,7 @@
 /*****************************************************************************
  * cpu.h: cpu detection
  *****************************************************************************
- * Copyright (C) 2004-2017 x264 project
+ * Copyright (C) 2004-2014 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *
@@ -45,6 +45,7 @@ void     x264_cpu_sfence( void );
 #define x264_emms()
 #endif
 #define x264_sfence x264_cpu_sfence
+void     x264_safe_intel_cpu_indicator_init( void );
 
 /* kludge:
  * gcc can't give variables any greater alignment than the stack frame has.
@@ -56,7 +57,7 @@ void     x264_cpu_sfence( void );
  * alignment between functions (osdep.h handles manual alignment of arrays
  * if it doesn't).
  */
-#if HAVE_MMX && (STACK_ALIGNMENT > 16 || (ARCH_X86 && STACK_ALIGNMENT > 4))
+#if (ARCH_X86 || STACK_ALIGNMENT > 16) && HAVE_MMX
 intptr_t x264_stack_align( void (*func)(), ... );
 #define x264_stack_align(func,...) x264_stack_align((void (*)())func, __VA_ARGS__)
 #else
@@ -65,7 +66,7 @@ intptr_t x264_stack_align( void (*func)(), ... );
 
 typedef struct
 {
-    const char *name;
+    const char name[16];
     uint32_t flags;
 } x264_cpu_name_t;
 extern const x264_cpu_name_t x264_cpu_names[];
