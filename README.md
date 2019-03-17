@@ -24,6 +24,8 @@ ndk版本为android-ndk-r14b，其他版本可能存在问题
  //修改do-compile-ffmpeg.sh文件配置编解码选项，默认开启aac,x264,lame编码器
 
  sudo sh compile.sh
+
+ 得到compile/lib/libffmpeg.so
 ```
 
 
