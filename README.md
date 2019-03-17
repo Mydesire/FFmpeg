@@ -3,56 +3,28 @@
 ===
 主要为了 Android 端集成学习
 
-基于3.3.3版本的拓展，集成了h264、aac、mp3等编码器
+基于3.3.3版本,拓展集成了h264、aac、lamemp3编码器
 
 ndk版本为android-ndk-r14b，其他版本可能存在问题
 
+使用
+===
 
-FFmpeg README
-=============
+```
+ git clone https://github.com/yhaolpz/FFmpeg
 
-FFmpeg is a collection of libraries and tools to process multimedia content
-such as audio, video, subtitles and related metadata.
+ cd FFmpeg
 
-## Libraries
+ git checkout -b cmd_ffmpeg_app_3 origin/cmd_ffmpeg_app_3
 
-* `libavcodec` provides implementation of a wider range of codecs.
-* `libavformat` implements streaming protocols, container formats and basic I/O access.
-* `libavutil` includes hashers, decompressors and miscellaneous utility functions.
-* `libavfilter` provides a mean to alter decoded Audio and Video through chain of filters.
-* `libavdevice` provides an abstraction to access capture and playback devices.
-* `libswresample` implements audio mixing and resampling routines.
-* `libswscale` implements color conversion and scaling routines.
+ cd compile
 
-## Tools
+ //修改compile.sh文件配置ndk路径（必须）
 
-* [ffmpeg](https://ffmpeg.org/ffmpeg.html) is a command line toolbox to
-  manipulate, convert and stream multimedia content.
-* [ffplay](https://ffmpeg.org/ffplay.html) is a minimalistic multimedia player.
-* [ffprobe](https://ffmpeg.org/ffprobe.html) is a simple analysis tool to inspect
-  multimedia content.
-* [ffserver](https://ffmpeg.org/ffserver.html) is a multimedia streaming server
-  for live broadcasts.
-* Additional small tools such as `aviocat`, `ismindex` and `qt-faststart`.
+ //修改do-compile-ffmpeg.sh文件配置编解码选项，默认开启aac,x264,lame编码器
 
-## Documentation
+ sudo sh compile.sh
+```
 
-The offline documentation is available in the **doc/** directory.
 
-The online documentation is available in the main [website](https://ffmpeg.org)
-and in the [wiki](https://trac.ffmpeg.org).
 
-### Examples
-
-Coding examples are available in the **doc/examples** directory.
-
-## License
-
-FFmpeg codebase is mainly LGPL-licensed with optional components licensed under
-GPL. Please refer to the LICENSE file for detailed information.
-
-## Contributing
-
-Patches should be submitted to the ffmpeg-devel mailing list using
-`git format-patch` or `git send-email`. Github pull requests should be
-avoided because they are not part of our review process and will be ignored.

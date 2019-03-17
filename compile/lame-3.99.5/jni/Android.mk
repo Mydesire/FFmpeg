@@ -28,6 +28,5 @@
  ./../libmp3lame/VbrTag.c \
  ./../libmp3lame/version.c
 
- LOCAL_LDLIBS := -llog
  include $(BUILD_STATIC_LIBRARY)
 

@@ -3,6 +3,8 @@
 
 # ndk路径，需要自己配置！！！
 export ANDROID_NDK=/Users/meitu/soft/android-ndk-r14b
+export FF_ANDROID_PLATFORM=android-14
+
 
 FF_TARGET=$1
 echo "FF_TARGET=$FF_TARGET"

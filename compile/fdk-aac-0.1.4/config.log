@@ -30,8 +30,8 @@ Kernel configured for up to 4 processors.
 Processor type: x86_64h (Intel x86-64h Haswell)
 Processors active: 0 1 2 3
 Primary memory available: 16.00 gigabytes
-Default processor set: 323 tasks, 1106 threads, 4 processors
-Load average: 3.23, Mach factor: 1.65
+Default processor set: 327 tasks, 1264 threads, 4 processors
+Load average: 1.87, Mach factor: 2.14
 /bin/machine           = unknown
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
@@ -100,7 +100,7 @@ configure:3212: /Users/meitu/soft/android-ndk-r14b/toolchains/arm-linux-androide
 ./configure: line 3214: /Users/meitu/soft/android-ndk-r14b/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin//arm-linux-androideabi-gcc: No such file or directory
 configure:3223: $? = 127
 configure:3243: checking whether the C compiler works
-configure:3265: /Users/meitu/soft/android-ndk-r14b/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin//arm-linux-androideabi-gcc --sysroot=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm    -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm/usr/lib conftest.c  >&5
+configure:3265: /Users/meitu/soft/android-ndk-r14b/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin//arm-linux-androideabi-gcc --sysroot=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm   -fpic -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm/usr/lib conftest.c  >&5
 ./configure: line 3267: /Users/meitu/soft/android-ndk-r14b/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin//arm-linux-androideabi-gcc: No such file or directory
 configure:3269: $? = 127
 configure:3307: result: no
@@ -148,7 +148,7 @@ ac_cv_env_CXXFLAGS_value=
 ac_cv_env_CXX_set=set
 ac_cv_env_CXX_value='/Users/meitu/soft/android-ndk-r14b/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin//arm-linux-androideabi-g++ --sysroot=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm'
 ac_cv_env_LDFLAGS_set=set
-ac_cv_env_LDFLAGS_value=' -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm/usr/lib'
+ac_cv_env_LDFLAGS_value='-fpic -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm/usr/lib'
 ac_cv_env_LIBS_set=
 ac_cv_env_LIBS_value=
 ac_cv_env_build_alias_set=
@@ -213,7 +213,7 @@ INSTALL_PROGRAM='${INSTALL}'
 INSTALL_SCRIPT='${INSTALL}'
 INSTALL_STRIP_PROGRAM='$(install_sh) -c -s'
 LD=''
-LDFLAGS=' -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm/usr/lib'
+LDFLAGS='-fpic -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=/Users/meitu/soft/android-ndk-r14b/platforms/android-14/arch-arm/usr/lib'
 LIBOBJS=''
 LIBS=''
 LIBS_PRIVATE=''

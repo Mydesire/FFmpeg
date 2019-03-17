@@ -16,7 +16,7 @@ ARM_INC=${SYSROOT}/usr/include
 
 ARM_LIB=${SYSROOT}/usr/lib
       
-LDFLAGS=" -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=$ARM_LIB"
+LDFLAGS="-fpic -nostdlib -Bdynamic -Wl,--whole-archive -Wl,--no-undefined -Wl,-z,noexecstack  -Wl,-z,nocopyreloc -Wl,-soname,/system/lib/libz.so -Wl,-rpath-link=$ARM_LIB"
 
 FLAGS="--host=arm-androideabi-linux --disable-shared "
 

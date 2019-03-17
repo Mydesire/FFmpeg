@@ -55,38 +55,22 @@ FF_SO_PREFIX=$(pwd)/lib/${FF_ARCH}
 
 # FFmpeg源码目录
 FF_FFMPEG_SOURCE=$(pwd)/../
+
+#todo 编译配置项
+#是否开启支持编码，0关闭,开启
+FF_X264=1
+FF_AAC=1
+FF_LAME=1
+#是否只config ffmpeg
+FF_ONLY_CONFIG=0
+
+
 # x264源码目录
 FF_X264_SOURCE=$(pwd)/x264
 # aac源码目录
 FF_AAC_SOURCE=$(pwd)/fdk-aac-0.1.4
 # lame源码目录
 FF_LAME_SOURCE=$(pwd)/lame-3.99.5
-echo ""
-echo "--------------------"
-echo "[*] make libx264"
-echo "--------------------"
-cd ${FF_X264_SOURCE}
-sh build.sh
-X264_INCLUDE=${FF_X264_SOURCE}/Android/arm/include
-X264_BIN=${FF_X264_SOURCE}/Android/arm/lib
-echo ""
-echo "--------------------"
-echo "[*] make libaac"
-echo "--------------------"
-cd ${FF_AAC_SOURCE}
-sh build.sh
-AAC_INCLUDE=${FF_AAC_SOURCE}/Android/arm/include
-AAC_BIN=${FF_AAC_SOURCE}/Android/arm/lib
-echo ""
-echo "--------------------"
-echo "[*] make lame"
-echo "--------------------"
-cd ${FF_LAME_SOURCE}/jni
-${FF_NDK}/ndk-build
-LAME_INCLUDE=${FF_LAME_SOURCE}/include
-LAME_BIN=${FF_LAME_SOURCE}/obj/local/armeabi-v7a
-
-cd ${FF_FFMPEG_SOURCE}
 
 # 交叉编译环境
 FF_SYSROOT=
@@ -103,7 +87,64 @@ FF_CONFIGURE_FLAGS=
 # 额外需要的头文件
 FF_EXTRA_CFLAGS=
 # 额外需要的库
-FF_EXTRA_LDFLAGS=
+FF_EXTRA_LDFLAGS="-lm"
+# 额外需要的库地址
+FF_EXTRA_LDPATHS=
+
+# 导入ffmpeg配置
+export COMMON_FF_CFG_FLAGS=
+. ${FF_COMPILE}/module.sh
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS $COMMON_FF_CFG_FLAGS"
+
+if [[ ${FF_X264} == 1 ]]; then
+echo ""
+echo "--------------------"
+echo "[*] make libx264"
+echo "--------------------"
+cd ${FF_X264_SOURCE}
+sh build.sh
+X264_INCLUDE=${FF_X264_SOURCE}/Android/arm/include
+X264_BIN=${FF_X264_SOURCE}/Android/arm/lib
+FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -I$X264_INCLUDE"
+FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -L$X264_BIN -lx264"
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS --enable-libx264"
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS --enable-encoder=libx264"
+FF_EXTRA_LDPATHS="$FF_EXTRA_LDPATHS ${X264_BIN}/libx264.a"
+fi
+
+if [[ ${FF_AAC} == 1 ]]; then
+echo ""
+echo "--------------------"
+echo "[*] make libaac"
+echo "--------------------"
+cd ${FF_AAC_SOURCE}
+sh build.sh
+AAC_INCLUDE=${FF_AAC_SOURCE}/Android/arm/include
+AAC_BIN=${FF_AAC_SOURCE}/Android/arm/lib
+FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -I$AAC_INCLUDE"
+FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -L$AAC_BIN"
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS --enable-libfdk-aac"
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS --enable-encoder=libfdk_aac"
+FF_EXTRA_LDPATHS="$FF_EXTRA_LDPATHS ${AAC_BIN}/libfdk-aac.a"
+fi
+
+if [[ ${FF_LAME} == 1 ]]; then
+echo ""
+echo "--------------------"
+echo "[*] make lame"
+echo "--------------------"
+cd ${FF_LAME_SOURCE}/jni
+${FF_NDK}/ndk-build
+LAME_INCLUDE=${FF_LAME_SOURCE}/include
+LAME_BIN=${FF_LAME_SOURCE}/obj/local/armeabi-v7a
+FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -I$LAME_INCLUDE"
+FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -L$LAME_BIN"
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS --enable-libmp3lame"
+FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS --enable-encoder=libmp3lame"
+FF_EXTRA_LDPATHS="$FF_EXTRA_LDPATHS ${LAME_BIN}/libmp3lame.a"
+fi
+
+cd ${FF_FFMPEG_SOURCE}
 
 if [ "$FF_ARCH" = "armv7a" ]; then
 
@@ -185,25 +226,6 @@ FF_EXTRA_CFLAGS="-O3 -Wall -pipe \
     -DANDROID -DNDEBUG \
     -Os -fPIC $FF_EXTRA_CFLAGS"
 
-FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -I$X264_INCLUDE"
-FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -L$X264_BIN -lx264"
-
-FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -I$AAC_INCLUDE"
-FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -L$AAC_BIN"
-
-FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -I$LAME_INCLUDE"
-FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -L$LAME_BIN"
-
-FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -lm"
-
-
-
-# 导入ffmpeg配置
-export COMMON_FF_CFG_FLAGS=
-. ${FF_COMPILE}/module.sh
-FF_CONFIGURE_FLAGS="$FF_CONFIGURE_FLAGS $COMMON_FF_CFG_FLAGS"
-
-
 # 交叉编译链
 FF_CROSS_PREFIX=${FF_NDK}/toolchains/${FF_TOOLCHAIN_NAME}/prebuilt/${FF_NDK_OS_NAME}/bin/${FF_GCC_NAME}-
 
@@ -247,6 +269,10 @@ echo "--------------------"
 ./configure ${FF_CONFIGURE_FLAGS} \
     --extra-cflags="$FF_EXTRA_CFLAGS" \
     --extra-ldflags="$FF_EXTRA_LDFLAGS"
+
+if [[ ${FF_ONLY_CONFIG} == 1 ]]; then
+exit 1
+fi
 
 make clean
 
@@ -311,11 +337,9 @@ ${FF_SHARED_PREFIX}/libffmpeg.so \
     ${FF_PREFIX}/lib/libpostproc.a \
     ${FF_PREFIX}/lib/libswresample.a \
     ${FF_PREFIX}/lib/libswscale.a \
-    -lc -lm -lz -ldl -llog --dynamic-linker=/system/bin/linker \
-    ${FF_LIB_GCC_DIR}/libgcc.a \
-    ${AAC_BIN}/libfdk-aac.a \
-    ${X264_BIN}/libx264.a \
-    ${LAME_BIN}/libmp3lame.a
+    -lc -lm -lz -fPIC -ldl -llog --dynamic-linker=/system/bin/linker \
+    ${FF_LIB_GCC_DIR}/libgcc.a ${FF_EXTRA_LDPATHS}
+
 
 make clean
 

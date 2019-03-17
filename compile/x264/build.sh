@@ -4,8 +4,8 @@
 #设置错误检查,如果语句出错立即退出
 set -e
 
-export ANDROID_NDK=/Users/meitu/soft/android-ndk-r14b
-export FF_ANDROID_PLATFORM=android-14
+#export ANDROID_NDK=/Users/meitu/soft/android-ndk-r14b
+#export FF_ANDROID_PLATFORM=android-14
 
 NDK_HOME=${ANDROID_NDK}
 ANDROID_API=${FF_ANDROID_PLATFORM}
@@ -36,12 +36,14 @@ PREFIX=$(pwd)/Android/${CPU}
     --prefix=${PREFIX} \
     --enable-static \
     --disable-shared \
+    --disable-asm \
     --enable-pic \
     --enable-strip \
     --cross-prefix=${TOOLCHAIN}/bin/arm-linux-androideabi- \
     --host=arm-linux-androideabi \
     --sysroot=${SYSROOT} \
-    --extra-cflags="-Os -fpic -march=armv7-a  -mfloat-abi=softfp -mfpu=neon"
+    --extra-cflags="-Os -fPIC -march=armv7-a  -mfloat-abi=softfp -mfpu=neon" \
+    --extra-ldflags="-Os -fPIC"
 
 make
 
